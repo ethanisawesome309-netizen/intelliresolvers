@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<?php
+if ($_SERVER['HTTP_HOST'] === 'intelliresolvers.com') {
+    header('Location: https://www.intelliresolvers.com' . $_SERVER['REQUEST_URI']);
+    exit();
+}
+include('index.html'); // your homepage
+?>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -96,3 +104,4 @@
         <script src="app.js"></script>
     </body>
 </html>
+
