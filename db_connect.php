@@ -2,7 +2,7 @@
 $host = "intelliresolvers-server.mysql.database.azure.com"; 
 $port = 3306;
 $db   = "intelliresolvers-database";
-$user = "rnobncovhs@intelliresolvers-server";
+$user = "rnobncovhs";
 $pass = "Wzxwzx07";
 $charset = "utf8mb4";
 
