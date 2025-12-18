@@ -1,8 +1,9 @@
 <?php
 $host = "intelliresolvers-server.mysql.database.azure.com"; 
+$port = 3306;
 $db   = "intelliresolvers-database";
 $user = "rnobncovhs@intelliresolvers-server";
-$pass = "Leafsarethebest1!";
+$pass = "Wzxwzx07";
 $charset = "utf8mb4";
 
 $ssl_ca = __DIR__ . '/DigiCertGlobalRootG2.crt.pem'; 
