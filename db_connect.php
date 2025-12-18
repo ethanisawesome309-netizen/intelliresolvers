@@ -5,7 +5,7 @@ $user = "rnobncovhs@intelliresolvers-server";
 $pass = "Leafsarethebest1!";
 $charset = "utf8mb4";
 
-$ssl_ca = __DIR__ . '/BaltimoreCyberTrustRoot.crt.pem'; 
+$ssl_ca = __DIR__ . '/DigiCertGlobalRootG2.crt.pem'; 
 
 $dsn = "mysql:host=$host;dbname=$db;charset=$charset";
 
