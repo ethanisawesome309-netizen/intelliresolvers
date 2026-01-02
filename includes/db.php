@@ -1,8 +1,8 @@
 <?php
 $host = "intelliresolvers.mysql.database.azure.com";
 $db   = "appdb";
-$user = "ethanwang";   
-$pass = "Wzxwx07";
+$user = "ethanwang@intelliresolvers";   
+$pass = "Wzxwxz07";
 $port = 3306;
 
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
