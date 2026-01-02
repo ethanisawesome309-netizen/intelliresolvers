@@ -1,8 +1,8 @@
 <?php
 $host = "intelliresolvers.mysql.database.azure.com";
 $db   = "appdb";
-$user = "ethanwang";   
-$pass = getenv("DB_PASSWORD"); 
+$user = "ethanwang@intelliresolvers";   // ✅ REQUIRED
+$pass = getenv("DB_PASSWORD");          // ✅ from Azure settings
 $port = 3306;
 
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
@@ -10,8 +10,6 @@ $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
 $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-
-    // 🔐 SSL REQUIRED BY SERVER, WINDOWS TRUST STORE USED
     PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
 ];
 
