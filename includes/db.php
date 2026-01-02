@@ -20,7 +20,6 @@ $options = [
 
 try {
     $conn = new PDO($dsn, $user, $pass, $options);
-    echo "CONNECTED SECURELY";
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
