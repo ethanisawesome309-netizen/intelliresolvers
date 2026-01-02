@@ -1,7 +1,7 @@
 <?php
 $host = "intelliresolvers.mysql.database.azure.com";
 $db   = "appdb";
-$user = "ethanwang";
+$user = "ethanwang@intelliresolvers";
 $pass = "Wzxwzx07"; // use env var
 $port = 3306;
 
@@ -16,5 +16,5 @@ $options = [
 try {
     $conn = new PDO($dsn, $user, $pass, $options);
 } catch (PDOException $e) {
-    die("Database connection failed");
+    die("Database connection failed: " . $e->getMessage());
 }
