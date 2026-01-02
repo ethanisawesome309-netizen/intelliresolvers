@@ -2,7 +2,7 @@
 $host = "intelliresolvers.mysql.database.azure.com";
 $db   = "appdb";
 $user = "ethanwang";
-$pass = getenv("DB_PASSWORD");
+$pass = "Wzxwzx07";
 $port = 3306;
 
 $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
