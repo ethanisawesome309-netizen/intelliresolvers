@@ -1,7 +1,7 @@
 <?php
 $host = "intelliresolvers.mysql.database.azure.com";
 $db   = "appdb";
-$user = "ethanwang@intelliresolvers";
+$user = "ethanwang";
 $pass = getenv("DB_PASSWORD");
 $port = 3306;
 
