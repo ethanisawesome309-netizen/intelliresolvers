@@ -5,7 +5,7 @@ $user = "ethanwang";
 $pass = getenv("DB_PASSWORD");
 $port = 3306;
 
-$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4";
+$dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8mb4;sslmode=required";
 
 $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -15,7 +15,7 @@ $options = [
     PDO::MYSQL_ATTR_SSL_CA => __DIR__ . "/certs/DigiCertGlobalRootCA.crt",
 
     // Optional but recommended
-    PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => true,
+    PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => false,
 ];
 
 try {
