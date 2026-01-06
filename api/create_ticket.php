@@ -18,7 +18,7 @@ if ($title === "" || $message === "") {
   exit;
 }
 
-require "/includes/db.php";
+require __DIR__ . "/../includes/db.php";
 
 $stmt = $pdo->prepare(
   "INSERT INTO tickets (user_id, title, message)
