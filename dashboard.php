@@ -1,4 +1,7 @@
 <?php
+ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_secure', 1);
+ini_set('session.use_strict_mode', 1);
 session_start();
 
 if (!isset($_SESSION["user_id"])) {
@@ -10,7 +13,8 @@ if (!isset($_SESSION["user_id"])) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Customer Dashboard</title>
+  <title>IntelliResolvers Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
   <div id="root"></div>
