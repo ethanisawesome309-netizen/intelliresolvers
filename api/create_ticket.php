@@ -4,47 +4,51 @@ require __DIR__ . "/../includes/db.php";
 
 header("Content-Type: application/json");
 
-// ==================================================
-// AUTH CHECK
-// ==================================================
+// Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode([
-        "error" => "Unauthorized – please log in"
+        "error" => "Unauthorized. Please log in."
     ]);
     exit;
 }
 
-// ==================================================
-// INPUT
-// ==================================================
+// Read JSON input
 $data = json_decode(file_get_contents("php://input"), true);
 
-if (
-    empty($data['title']) ||
-    empty($data['message'])
-) {
+// Validate required fields
+$title = trim($data['title'] ?? '');
+$message = trim($data['message'] ?? '');
+
+if ($title === '' || $message === '') {
     http_response_code(400);
     echo json_encode([
-        "error" => "Title and message are required"
+        "error" => "Title and message are required."
     ]);
     exit;
 }
 
-// ==================================================
-// INSERT TICKET
-// ==================================================
-$stmt = $conn->prepare(
-    "INSERT INTO tickets (user_id, title, message, status)
-     VALUES (:uid, :title, :message, 'open')"
-);
+// Insert ticket
+try {
+    $stmt = $conn->prepare(
+        "INSERT INTO tickets (user_id, title, message, status)
+         VALUES (:uid, :title, :message, 'open')"
+    );
 
-$stmt->execute([
-    'uid'     => $_SESSION['user_id'],
-    'title'   => $data['title'],
-    'message' => $data['message']
-]);
+    $stmt->execute([
+        'uid' => $_SESSION['user_id'],
+        'title' => $title,
+        'message' => $message
+    ]);
 
-echo json_encode([
-    "success" => true
-]);
+    echo json_encode([
+        "success" => true,
+        "ticket_id" => $conn->lastInsertId()
+    ]);
+
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode([
+        "error" => "Failed to create ticket: " . $e->getMessage()
+    ]);
+}
