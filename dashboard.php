@@ -1,28 +1,19 @@
 <?php
-echo "<h1 style='color:red'>DASHBOARD.PHP FILE LOADED</h1>";
-exit;
-// ================= CANONICAL DOMAIN =================
-if ($_SERVER['HTTP_HOST'] !== 'intelliresolvers.com') {
-    header(
-        "Location: https://intelliresolvers.com" . $_SERVER['REQUEST_URI'],
-        true,
-        301
-    );
-    exit;
-}
-
 require __DIR__ . "/includes/session.php";
 
-// ================= AUTH GUARD =================
-if (!isset($_SESSION['user_id'])) {
-    header("Location: signinpage.php");
-    exit;
-}
+echo "<pre style='color:white;background:#111;padding:20px'>";
+echo "DASHBOARD DEBUG\n";
+echo "=================\n";
+echo "SESSION ID: " . session_id() . "\n";
+echo "SESSION NAME: " . session_name() . "\n";
+echo "COOKIE RECEIVED: ";
+var_dump($_COOKIE[session_name()] ?? null);
+echo "\nUSER ID: ";
+var_dump($_SESSION['user_id'] ?? null);
+echo "</pre>";
 
-// Prevent caching
-header("Cache-Control: no-cache, no-store, must-revalidate");
-header("Pragma: no-cache");
-header("Expires: 0");
+exit;
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
