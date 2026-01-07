@@ -14,6 +14,6 @@ if (empty($_SESSION['user_id']) || empty($_SESSION['is_admin'])) {
 </head>
 <body>
   <div id="root">Loading admin dashboard…</div>
-  <script type="module" src="/admin/AdminApp.js?v=<?= time() ?>"></script>
+  <script type="module" src="/assets/admin.js"></script>
 </body>
 </html>
