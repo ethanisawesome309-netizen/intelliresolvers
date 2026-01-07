@@ -28,8 +28,12 @@ exit;
     <noscript style="color:red">
         JavaScript is required to use this application.
     </noscript>
+<div id="root" style="color:lime;font-size:24px">
+  PHP AUTH OK — REACT SHOULD LOAD DASHBOARD
+</div>
 
     <!-- React bundle -->
-    <script type="module" src="/assets/index.js?v=<?= time() ?>"></script>
+    <!-- <script type="module" src="/assets/index.js?v=<?= time() ?>"></script> -->
+
 </body>
 </html>
