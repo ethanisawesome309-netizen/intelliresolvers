@@ -15,3 +15,4 @@ session_set_cookie_params([
 
 session_name('INTELLISESSID');
 session_start();
+?>
