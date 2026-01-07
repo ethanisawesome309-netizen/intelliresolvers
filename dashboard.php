@@ -1,4 +1,6 @@
 <?php
+echo "<h1 style='color:red'>DASHBOARD.PHP FILE LOADED</h1>";
+exit;
 // ================= CANONICAL DOMAIN =================
 if ($_SERVER['HTTP_HOST'] !== 'intelliresolvers.com') {
     header(
