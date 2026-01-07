@@ -1,7 +1,11 @@
 <?php
-// session.php ensures $_SESSION works
+// Start the session
 require __DIR__ . "/includes/session.php";
-// NO REDIRECT HERE. Let React handle login UI.
+
+// Optional: prevent caching of old pages
+header("Cache-Control: no-cache, no-store, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -11,11 +15,13 @@ require __DIR__ . "/includes/session.php";
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
-    <div id="root"></div>
+    <!-- Show loading placeholder until React renders -->
+    <div id="root">Loading dashboard…</div>
     <noscript style="color:red">
         JavaScript is required to use this application.
     </noscript>
-    <script type="module" src="/assets/index.js"></script>
+
+    <!-- Load latest React bundle with cache-busting -->
+    <script type="module" src="/assets/index.js?v=<?=time()?>"></script>
 </body>
 </html>
-
