@@ -1,11 +1,36 @@
 <?php
+// --------------------------
+// SESSION FIX FOR CSRF
+// --------------------------
+
+// Force cookies for all subdomains so www and non-www share the session
+ini_set('session.cookie_secure', 1);
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_strict_mode', 1);
+
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '.intelliresolvers.com', // leading dot allows subdomains
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
+
 session_start();
+
 require "includes/db.php";
 
+// --------------------------
+// CSRF TOKEN
+// --------------------------
 if (empty($_SESSION["csrf_token"])) {
     $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
 }
 
+// --------------------------
+// LOGIN PROCESS
+// --------------------------
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     if (!hash_equals($_SESSION["csrf_token"], $_POST["csrf_token"] ?? "")) {
         die("Invalid request");
@@ -28,7 +53,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -204,7 +228,7 @@ button {
       <li><a href="index.html" class="navbar__links">Home</a></li>
       <li><a href="services.html" class="navbar__links">Services</a></li>
       <li><a href="team.html" class="navbar__links">Team</a></li>
-      <li class="navbar__btn"><a href="Signinpage.php" class="button">Sign In</a></li>
+      <li class="navbar__btn"><a href="signinpage.php" class="button">Sign In</a></li>
     </ul>
   </div>
 </nav>
