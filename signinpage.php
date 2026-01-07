@@ -12,7 +12,7 @@ if ($_SERVER['HTTP_HOST'] !== 'intelliresolvers.com') {
 require __DIR__ . "/includes/session.php";
 require __DIR__ . "/includes/db.php";
 
-// CSRF
+// ================= CSRF =================
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -31,28 +31,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email    = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
 
+        // 🔒 FETCH is_admin AS WELL
         $stmt = $conn->prepare(
-            "SELECT id, password_hash FROM users WHERE email = :email LIMIT 1"
+            "SELECT id, password_hash, is_admin
+             FROM users
+             WHERE email = :email
+             LIMIT 1"
         );
         $stmt->execute(['email' => $email]);
-        $user = $stmt->fetch();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password_hash'])) {
+
             session_regenerate_id(true);
 
-            $_SESSION['user_id'] = $user['id'];
+            $_SESSION['user_id']  = (int)$user['id'];
             $_SESSION['is_admin'] = (bool)$user['is_admin'];
 
-            header("Location: dashboard.php");
+            // ✅ ROLE-BASED REDIRECT
+            if ($_SESSION['is_admin']) {
+                header("Location: /admin/admin_dashboard.php");
+            } else {
+                header("Location: dashboard.php");
+            }
             exit;
+
         } else {
             $error = "Invalid email or password.";
         }
     }
 }
 ?>
-<!-- HTML BELOW UNCHANGED -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -267,7 +276,7 @@ button {
         <p>Access your IntelliResolvers dashboard</p>
 
         <?php if ($error): ?>
-            <div class="error"><?= $error ?></div>
+            <div class="error"><?= htmlspecialchars($error) ?></div>
         <?php endif; ?>
 
         <form method="POST">
