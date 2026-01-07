@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($user && password_verify($password, $user['password_hash'])) {
             session_regenerate_id(true);
             $_SESSION['user_id'] = $user['id'];
-            header("Location: dashboard.php");
+            header("Location: https://intelliresolvers.com/dashboard.php");
             exit;
         } else {
             $error = "❌ Invalid email or password.";
