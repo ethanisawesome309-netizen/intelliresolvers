@@ -1,18 +1,25 @@
 <?php
 // --------------------------
-// SESSION FIX FOR CSRF
+// SESSION FIX FOR CSRF (works locally and in prod)
 // --------------------------
 
-// Force cookies for all subdomains so www and non-www share the session
-ini_set('session.cookie_secure', 1);
+// Detect if running on HTTPS
+$is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
+            || $_SERVER['SERVER_PORT'] == 443;
+
+// Use .intelliresolvers.com for prod, null for localhost
+$cookie_domain = (strpos($_SERVER['HTTP_HOST'], 'intelliresolvers.com') !== false) 
+                 ? '.intelliresolvers.com' 
+                 : null;
+
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_strict_mode', 1);
 
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
-    'domain' => '.intelliresolvers.com', // leading dot allows subdomains
-    'secure' => true,
+    'domain' => $cookie_domain,
+    'secure' => $is_https, // only secure on HTTPS
     'httponly' => true,
     'samesite' => 'Lax'
 ]);
@@ -80,7 +87,7 @@ body {
   flex-direction: column;
 }
 
-/* NAVBAR (MATCHES SITE) */
+/* NAVBAR */
 .navbar {
   background: #131313;
   height: 80px;
