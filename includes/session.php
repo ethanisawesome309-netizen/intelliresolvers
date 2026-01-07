@@ -1,18 +1,17 @@
 <?php
-// =============================================
-// GLOBAL SESSION BOOTSTRAP
-// =============================================
+// includes/session.php
 
-ini_set('session.use_strict_mode', 0);
-ini_set('session.cookie_httponly', 1);
+// Force HTTPS cookies only
+ini_set('session.use_strict_mode', 1);
 
 session_set_cookie_params([
     'lifetime' => 0,
-    'path'     => '/',
-    'domain'   => '.intelliresolvers.com',
-    'secure'   => true,
+    'path' => '/',
+    'domain' => 'intelliresolvers.com', // 🔥 MUST MATCH DOMAIN
+    'secure' => true,
     'httponly' => true,
-    'samesite' => 'None'
+    'samesite' => 'Lax',
 ]);
 
+session_name('INTELLISESSID');
 session_start();
