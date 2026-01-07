@@ -1,19 +1,25 @@
 <?php
-// --------------------------
-// SESSION FIX FOR CSRF (local + prod)
-// --------------------------
+// ==========================
+// SESSION CONFIG (FIXED)
+// ==========================
 
-$is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || $_SERVER['SERVER_PORT'] == 443;
+// Detect HTTPS correctly
+$is_https = (
+    (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || $_SERVER['SERVER_PORT'] == 443
+);
 
+// Cookie domain logic
 $cookie_domain = null;
 if (strpos($_SERVER['HTTP_HOST'], 'intelliresolvers.com') !== false) {
     $cookie_domain = '.intelliresolvers.com';
     $is_https = true;
 }
 
+// IMPORTANT FIX:
+// ❌ strict_mode breaks login CSRF on cross-subdomain auth
+ini_set('session.use_strict_mode', 0);
 ini_set('session.cookie_httponly', 1);
-ini_set('session.use_strict_mode', 1);
 
 session_set_cookie_params([
     'lifetime' => 0,
@@ -28,41 +34,34 @@ session_start();
 
 require "includes/db.php";
 
-// --------------------------
-// CSRF TOKEN (always exists)
-// --------------------------
-if (empty($_SESSION["csrf_token"])) {
-    $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
+// ==========================
+// CSRF TOKEN (STABLE)
+// ==========================
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
+// ==========================
+// LOGIN LOGIC
+// ==========================
 $error = "";
 
-// --------------------------
-// LOGIN PROCESS
-// --------------------------
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $posted_token  = $_POST["csrf_token"] ?? '';
-    $session_token = $_SESSION["csrf_token"] ?? '';
+    $posted = $_POST['csrf_token'] ?? '';
+    $session = $_SESSION['csrf_token'] ?? '';
 
-    if (!hash_equals($session_token, $posted_token)) {
-
-        $error = "Invalid request. CSRF mismatch.<br>
-                  <small>
-                  Posted token: $posted_token<br>
-                  Session token: $session_token<br>
-                  Session ID: " . session_id() . "
-                  </small>";
-
+    if (!$posted || !$session || !hash_equals($session, $posted)) {
+        $error = "Security error. Please refresh the page and try again.";
     } else {
 
-        $email    = trim($_POST["email"]);
-        $password = $_POST["password"];
+        $email = trim($_POST["email"] ?? "");
+        $password = $_POST["password"] ?? "";
 
         $stmt = $conn->prepare(
-            "SELECT id, password_hash FROM users WHERE email = :email"
+            "SELECT id, password_hash FROM users WHERE email = :email LIMIT 1"
         );
-        $stmt->execute(["email" => $email]);
+        $stmt->execute(['email' => $email]);
         $user = $stmt->fetch();
 
         if ($user && password_verify($password, $user["password_hash"])) {
@@ -74,10 +73,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $error = "Invalid email or password";
         }
     }
-
-    // 🔑 CRITICAL FIX:
-    // Always regenerate CSRF token after POST
-    $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
 }
 ?>
 <!DOCTYPE html>
@@ -201,7 +196,6 @@ body {
 .error {
   color: #ff6b6b;
   margin-bottom: 1rem;
-  word-break: break-word;
 }
 
 input {
@@ -248,7 +242,9 @@ button {
 
 <nav class="navbar">
   <div class="navbar__container">
-    <a href="index.html" id="navbar__logo"><i class="fas fa-gem"></i>INTELLI RESOLVERS</a>
+    <a href="index.html" id="navbar__logo">
+      <i class="fas fa-gem"></i>INTELLI RESOLVERS
+    </a>
     <ul class="navbar__menu">
       <li><a href="index.html" class="navbar__links">Home</a></li>
       <li><a href="services.html" class="navbar__links">Services</a></li>
@@ -263,12 +259,12 @@ button {
     <h1>Sign In</h1>
     <p>Access your IntelliResolvers dashboard</p>
 
-    <?php if (!empty($error)): ?>
-      <div class="error"><?= $error ?></div>
+    <?php if ($error): ?>
+      <div class="error"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
 
-    <form method="POST">
-      <input type="hidden" name="csrf_token" value="<?= $_SESSION["csrf_token"] ?>">
+    <form method="POST" autocomplete="off">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
       <input type="email" name="email" placeholder="Email address" required>
       <input type="password" name="password" placeholder="Password" required>
       <button type="submit">Sign In</button>
@@ -277,6 +273,10 @@ button {
 </div>
 
 <div class="footer__container">
-  <p class="website__rights">© INTELLI RESOLVERS <?= date("Y") ?>. All rights reserved.</p>
+  <p class="website__rights">
+    © INTELLI RESOLVERS <?= date("Y") ?>. All rights reserved.
+  </p>
 </div>
 
+</body>
+</html>
