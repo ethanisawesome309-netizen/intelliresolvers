@@ -7,14 +7,17 @@
 $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
             || $_SERVER['SERVER_PORT'] == 443;
 
-// Use .intelliresolvers.com for prod, null for localhost
-$cookie_domain = (strpos($_SERVER['HTTP_HOST'], 'intelliresolvers.com') !== false) 
-                 ? '.intelliresolvers.com' 
-                 : null;
+// Determine cookie domain
+$cookie_domain = null; // default for localhost
+if (strpos($_SERVER['HTTP_HOST'], 'intelliresolvers.com') !== false) {
+    $cookie_domain = '.intelliresolvers.com'; // prod
+    $is_https = true; // force HTTPS for prod
+}
 
 ini_set('session.cookie_httponly', 1);
 ini_set('session.use_strict_mode', 1);
 
+// Set session cookie params
 session_set_cookie_params([
     'lifetime' => 0,
     'path' => '/',
@@ -43,11 +46,11 @@ $error = "";
 // --------------------------
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    // Check CSRF token
-    if (!hash_equals($_SESSION["csrf_token"], $_POST["csrf_token"] ?? "")) {
-        // Show diagnostic error on the page
-        $posted_token = $_POST["csrf_token"] ?? '(none)';
-        $session_token = $_SESSION["csrf_token"] ?? '(none)';
+    // CSRF check
+    $posted_token = $_POST["csrf_token"] ?? '';
+    $session_token = $_SESSION["csrf_token"] ?? '';
+
+    if (!hash_equals($session_token, $posted_token)) {
         $error = "Invalid request. CSRF mismatch.<br>Posted token: $posted_token<br>Session token: $session_token";
     } else {
         $email = trim($_POST["email"]);
