@@ -35,28 +35,36 @@ if (empty($_SESSION["csrf_token"])) {
     $_SESSION["csrf_token"] = bin2hex(random_bytes(32));
 }
 
+// Initialize error variable
+$error = "";
+
 // --------------------------
 // LOGIN PROCESS
 // --------------------------
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    // Check CSRF token
     if (!hash_equals($_SESSION["csrf_token"], $_POST["csrf_token"] ?? "")) {
-        die("Invalid request");
-    }
-
-    $email = trim($_POST["email"]);
-    $password = $_POST["password"];
-
-    $stmt = $conn->prepare("SELECT id, password_hash FROM users WHERE email = :email");
-    $stmt->execute(["email" => $email]);
-    $user = $stmt->fetch();
-
-    if ($user && password_verify($password, $user["password_hash"])) {
-        session_regenerate_id(true);
-        $_SESSION["user_id"] = $user["id"];
-        header("Location: dashboard.php");
-        exit;
+        // Show diagnostic error on the page
+        $posted_token = $_POST["csrf_token"] ?? '(none)';
+        $session_token = $_SESSION["csrf_token"] ?? '(none)';
+        $error = "Invalid request. CSRF mismatch.<br>Posted token: $posted_token<br>Session token: $session_token";
     } else {
-        $error = "Invalid email or password";
+        $email = trim($_POST["email"]);
+        $password = $_POST["password"];
+
+        $stmt = $conn->prepare("SELECT id, password_hash FROM users WHERE email = :email");
+        $stmt->execute(["email" => $email]);
+        $user = $stmt->fetch();
+
+        if ($user && password_verify($password, $user["password_hash"])) {
+            session_regenerate_id(true);
+            $_SESSION["user_id"] = $user["id"];
+            header("Location: dashboard.php");
+            exit;
+        } else {
+            $error = "Invalid email or password";
+        }
     }
 }
 ?>
@@ -181,6 +189,7 @@ body {
 .error {
   color: #ff6b6b;
   margin-bottom: 1rem;
+  word-break: break-word;
 }
 
 input {
@@ -246,8 +255,8 @@ button {
     <h1>Sign In</h1>
     <p>Access your IntelliResolvers dashboard</p>
 
-    <?php if (isset($error)): ?>
-      <div class="error"><?= htmlspecialchars($error) ?></div>
+    <?php if (!empty($error)): ?>
+      <div class="error"><?= $error ?></div>
     <?php endif; ?>
 
     <form method="POST">
