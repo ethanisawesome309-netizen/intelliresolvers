@@ -1,59 +1,24 @@
 <?php
-// Allow requests from both www and non-www
-$allowed_origins = [
-    "https://www.intelliresolvers.com",
-    "https://intelliresolvers.com"
-];
-
-if (isset($_SERVER['HTTP_ORIGIN']) && in_array($_SERVER['HTTP_ORIGIN'], $allowed_origins)) {
-    header("Access-Control-Allow-Origin: {$_SERVER['HTTP_ORIGIN']}");
-    header("Access-Control-Allow-Credentials: true");
-    header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-    header("Access-Control-Allow-Headers: Content-Type");
-}
-
-// Handle preflight OPTIONS request for CORS
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit;
-}
+require __DIR__ . "/../includes/session.php";
+require __DIR__ . "/../includes/db.php";
 
 header("Content-Type: application/json");
 
-// Secure session settings
-ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', 1);
-ini_set('session.use_strict_mode', 1);
-
-// Force cookies for .intelliresolvers.com so www and non-www share the session
-session_set_cookie_params([
-    'lifetime' => 0,
-    'path' => '/',
-    'domain' => '.intelliresolvers.com',
-    'secure' => true,
-    'httponly' => true,
-    'samesite' => 'Lax'
-]);
-
-session_start();
-
-// Check login
-if (!isset($_SESSION["user_id"])) {
+if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
-    echo json_encode(["error" => "Unauthorized"]);
+    echo json_encode([]);
     exit;
 }
 
-// Include database connection
-require __DIR__ . "/../includes/db.php";
-
-// Fetch tickets for the logged-in user
-$stmt = $pdo->prepare(
-    "SELECT id, title, message, status, created_at
+$stmt = $conn->prepare(
+    "SELECT *
      FROM tickets
-     WHERE user_id = ?
-     ORDER BY created_at DESC"
+     WHERE user_id = :uid
+     ORDER BY id DESC"
 );
 
-$stmt->execute([$_SESSION["user_id"]]);
+$stmt->execute([
+    'uid' => $_SESSION['user_id']
+]);
 
 echo json_encode($stmt->fetchAll());
