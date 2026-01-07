@@ -1,7 +1,5 @@
 <?php
-// ==================================================
-// CANONICAL DOMAIN (PREVENT SESSION SPLIT)
-// ==================================================
+// ================= CANONICAL DOMAIN =================
 if ($_SERVER['HTTP_HOST'] !== 'intelliresolvers.com') {
     header(
         "Location: https://intelliresolvers.com" . $_SERVER['REQUEST_URI'],
@@ -14,35 +12,27 @@ if ($_SERVER['HTTP_HOST'] !== 'intelliresolvers.com') {
 require __DIR__ . "/includes/session.php";
 require __DIR__ . "/includes/db.php";
 
-// ==================================================
-// CSRF TOKEN
-// ==================================================
+// CSRF
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 $error = "";
 
-// ==================================================
-// LOGIN HANDLER
-// ==================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (
         empty($_POST['csrf_token']) ||
         !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
     ) {
-        $error = "🚨 Security error. Please refresh the page and try again.";
+        $error = "Security error. Refresh and try again.";
     } else {
 
         $email    = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
 
         $stmt = $conn->prepare(
-            "SELECT id, password_hash
-             FROM users
-             WHERE email = :email
-             LIMIT 1"
+            "SELECT id, password_hash FROM users WHERE email = :email LIMIT 1"
         );
         $stmt->execute(['email' => $email]);
         $user = $stmt->fetch();
@@ -53,11 +43,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: dashboard.php");
             exit;
         } else {
-            $error = "❌ Invalid email or password.";
+            $error = "Invalid email or password.";
         }
     }
 }
 ?>
+<!-- HTML BELOW UNCHANGED -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
