@@ -1,19 +1,26 @@
 <?php
+// ================= CANONICAL DOMAIN =================
+if ($_SERVER['HTTP_HOST'] !== 'intelliresolvers.com') {
+    header(
+        "Location: https://intelliresolvers.com" . $_SERVER['REQUEST_URI'],
+        true,
+        301
+    );
+    exit;
+}
+
 require __DIR__ . "/includes/session.php";
 
-echo "<pre style='color:white;background:#111;padding:20px'>";
-echo "DASHBOARD DEBUG\n";
-echo "=================\n";
-echo "SESSION ID: " . session_id() . "\n";
-echo "SESSION NAME: " . session_name() . "\n";
-echo "COOKIE RECEIVED: ";
-var_dump($_COOKIE[session_name()] ?? null);
-echo "\nUSER ID: ";
-var_dump($_SESSION['user_id'] ?? null);
-echo "</pre>";
+// ================= AUTH GUARD =================
+if (!isset($_SESSION['user_id'])) {
+    header("Location: signinpage.php");
+    exit;
+}
 
-exit;
-
+// Prevent caching
+header("Cache-Control: no-cache, no-store, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -31,6 +38,5 @@ exit;
 
     <!-- React bundle -->
     <script type="module" src="/assets/index.js?v=<?= time() ?>"></script>
-
 </body>
 </html>
