@@ -2,6 +2,8 @@
 require __DIR__ . "/includes/session.php";
 require __DIR__ . "/includes/db.php";
 
+$error = null;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $email = trim($_POST['email'] ?? '');
@@ -20,8 +22,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         session_regenerate_id(true);
 
-        $_SESSION['user_id'] = (int)$user['id'];
+        $_SESSION['user_id']  = (int)$user['id'];
         $_SESSION['is_admin'] = (bool)$user['is_admin'];
+
+        // DEBUG OUTPUT
+        if (SESSION_DEBUG) {
+            echo "<pre>LOGIN OK\n";
+            var_dump($_SESSION);
+            var_dump(headers_list());
+            exit;
+        }
 
         header("Location: " . ($_SESSION['is_admin']
             ? "/admin/admin_dashboard.php"
@@ -32,14 +42,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $error = "Invalid login";
 }
+
 ?>
+<!-- HTML BELOW UNCHANGED -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Sign In | INTELLI RESOLVERS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://kit.fontawesome.com/9f925d73ef.js" crossorigin="anonymous"></script>
 <link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@100..900&display=swap" rel="stylesheet">
+
 <style>
 /* =================== RESET =================== */
 * {
@@ -244,7 +260,7 @@ button {
         <p>Access your IntelliResolvers dashboard</p>
 
         <?php if ($error): ?>
-            <div class="error"><?= htmlspecialchars($error) ?></div>
+            <div class="error"><?= $error ?></div>
         <?php endif; ?>
 
         <form method="POST">
