@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-require __DIR__ . "/includes/session.php";
-require __DIR__ . "/includes/db.php";
+require __DIR__ . '/includes/session.php';
+require __DIR__ . '/includes/db.php';
 
 $error = null;
 
@@ -11,18 +11,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    $stmt = $conn->prepare("
-        SELECT id, password_hash, is_admin
-        FROM users
-        WHERE email = ?
-        LIMIT 1
-    ");
+    $stmt = $conn->prepare(
+        "SELECT id, password_hash, is_admin FROM users WHERE email = ? LIMIT 1"
+    );
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user && password_verify($password, $user['password_hash'])) {
 
-        // Prevent session fixation
         session_regenerate_id(true);
 
         $_SESSION['user_id']  = (int)$user['id'];
