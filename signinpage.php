@@ -1,10 +1,21 @@
 <?php
+declare(strict_types=1);
+
 require __DIR__ . "/includes/session.php";
 require __DIR__ . "/includes/db.php";
 
 $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // CSRF validation
+    if (
+        empty($_POST['csrf_token']) ||
+        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
+    ) {
+        http_response_code(400);
+        exit("Invalid CSRF token");
+    }
 
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -25,14 +36,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['user_id']  = (int)$user['id'];
         $_SESSION['is_admin'] = (bool)$user['is_admin'];
 
-        // DEBUG OUTPUT
-        if (SESSION_DEBUG) {
-            echo "<pre>LOGIN OK\n";
-            var_dump($_SESSION);
-            var_dump(headers_list());
-            exit;
-        }
-
         header("Location: " . ($_SESSION['is_admin']
             ? "/admin/admin_dashboard.php"
             : "/dashboard.php"
@@ -40,8 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    $error = "Invalid login";
+    $error = "Invalid email or password";
 }
+
 
 ?>
 <!-- HTML BELOW UNCHANGED -->
