@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (
         empty($_POST['csrf_token']) ||
+        empty($_SESSION['csrf_token']) ||
         !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
     ) {
         $error = "Security error. Refresh and try again.";
@@ -31,7 +32,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email    = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
 
-        // 🔒 FETCH is_admin AS WELL
         $stmt = $conn->prepare(
             "SELECT id, password_hash, is_admin
              FROM users
@@ -48,9 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_id']  = (int)$user['id'];
             $_SESSION['is_admin'] = (bool)$user['is_admin'];
 
+            // ✅ DEFINE THIS (THIS WAS MISSING)
             $isAdmin = $_SESSION['is_admin'];
-            
-            session_write_close();
 
             if ($isAdmin) {
                 header("Location: /admin/admin_dashboard.php");
@@ -71,10 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="UTF-8">
 <title>Sign In | INTELLI RESOLVERS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<script src="https://kit.fontawesome.com/9f925d73ef.js" crossorigin="anonymous"></script>
 <link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@100..900&display=swap" rel="stylesheet">
-
 <style>
 /* =================== RESET =================== */
 * {
