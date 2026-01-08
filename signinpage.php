@@ -1,38 +1,55 @@
 <?php
 declare(strict_types=1);
 
-require __DIR__ . '/includes/session.php';
+require __DIR__ . '/includes/session.php'; // Must start session
 require __DIR__ . '/includes/db.php';
 
 $error = null;
 
+// ==================== CSRF TOKEN ====================
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+    // Optional: verify CSRF token
+    $csrf_post = $_POST['csrf_token'] ?? '';
+    if (!hash_equals($_SESSION['csrf_token'], $csrf_post)) {
+        $error = "Invalid CSRF token";
+    } else {
 
-    $stmt = $conn->prepare(
-        "SELECT id, password_hash, is_admin FROM users WHERE email = ? LIMIT 1"
-    );
-    $stmt->execute([$email]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
 
-    if ($user && password_verify($password, $user['password_hash'])) {
+        $stmt = $conn->prepare(
+            "SELECT id, password_hash, is_admin FROM users WHERE email = ? LIMIT 1"
+        );
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        session_regenerate_id(true);
+        if ($user && password_verify($password, $user['password_hash'])) {
 
-        $_SESSION['user_id']  = (int)$user['id'];
-        $_SESSION['is_admin'] = (bool)$user['is_admin'];
+            session_regenerate_id(true); // Prevent session fixation
 
-        header("Location: " . (
-            $_SESSION['is_admin']
-                ? "/admin/admin_dashboard.php"
-                : "/dashboard.php"
-        ));
-        exit;
+            // ==================== SESSION VALUES ====================
+            $_SESSION['user_id']  = (int)$user['id'];
+            $_SESSION['is_admin'] = (bool)$user['is_admin'];
+
+            // Optional: store email for convenience
+            $_SESSION['email'] = $email;
+
+            // ==================== REDIRECT ====================
+            header("Location: " . (
+                $_SESSION['is_admin']
+                    ? "/admin/admin_dashboard.php"
+                    : "/dashboard.php"
+            ));
+            exit;
+        }
+
+        $error = "Invalid email or password";
     }
-
-    $error = "Invalid email or password";
 }
 ?>
 <!DOCTYPE html>
