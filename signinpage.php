@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-require __DIR__ . '/includes/session.php'; // Must start session
+require __DIR__ . '/includes/session.php'; 
 require __DIR__ . '/includes/db.php';
 
 $error = null;
@@ -12,13 +12,10 @@ if (!isset($_SESSION['csrf_token'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-
-    // Optional: verify CSRF token
     $csrf_post = $_POST['csrf_token'] ?? '';
     if (!hash_equals($_SESSION['csrf_token'], $csrf_post)) {
         $error = "Invalid CSRF token";
     } else {
-
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
 
@@ -29,25 +26,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password_hash'])) {
+            
+            // 1. Prevent fixation
+            session_regenerate_id(true); 
 
-            session_regenerate_id(true); // Prevent session fixation
-
-            // ==================== SESSION VALUES ====================
+            // 2. Set session data
             $_SESSION['user_id']  = (int)$user['id'];
             $_SESSION['is_admin'] = (bool)$user['is_admin'];
+            $_SESSION['email']    = $email;
 
-            // Optional: store email for convenience
-            $_SESSION['email'] = $email;
+            // 3. FORCE SAVE BEFORE REDIRECT (The Fix)
+            session_write_close();
 
-            // ==================== REDIRECT ====================
-            header("Location: " . (
-                $_SESSION['is_admin']
-                    ? "/admin/admin_dashboard.php"
-                    : "/dashboard.php"
-            ));
+            // 4. Redirect
+            $redirect = $_SESSION['is_admin'] ? "/admin/admin_dashboard.php" : "/dashboard.php";
+            header("Location: " . $redirect);
             exit;
         }
-
         $error = "Invalid email or password";
     }
 }
