@@ -11,7 +11,7 @@ $debug = [];
 
 try {
     // USE THE SHARED SESSION FILE
-    require __DIR__ . '/includes/session.php';
+    require __DIR__ . '/../includes/session.php';
 
     $debug['step'] = 'session_started';
     $debug['session_id'] = session_id();
@@ -30,7 +30,7 @@ try {
     $debug['step'] = 'admin_verified';
 
     // ================= DB =================
-    require __DIR__ . "/includes/db.php";
+    require __DIR__ . "/../includes/db.php";
 
     if (!isset($conn)) {
         throw new Exception("Database connection missing");
