@@ -5,6 +5,15 @@ require __DIR__ . '/includes/session.php';
 require __DIR__ . '/includes/db.php';
 
 $error = null;
+$info_message = null;
+
+// ==================== UI ALERTS ====================
+if (isset($_GET['error']) && $_GET['error'] === 'timeout') {
+    $error = "Your session has expired due to inactivity. Please sign in again.";
+}
+if (isset($_GET['loggedout'])) {
+    $info_message = "You have been logged out successfully.";
+}
 
 // ==================== CSRF TOKEN ====================
 if (!isset($_SESSION['csrf_token'])) {
@@ -19,26 +28,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
 
-        $stmt = $conn->prepare(
-            "SELECT id, password_hash, is_admin FROM users WHERE email = ? LIMIT 1"
-        );
+        $stmt = $conn->prepare("SELECT id, password_hash, is_admin FROM users WHERE email = ? LIMIT 1");
         $stmt->execute([$email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password_hash'])) {
-            
-            // 1. Prevent fixation
             session_regenerate_id(true); 
 
-            // 2. Set session data
             $_SESSION['user_id']  = (int)$user['id'];
             $_SESSION['is_admin'] = (bool)$user['is_admin'];
             $_SESSION['email']    = $email;
+            $_SESSION['last_activity'] = time(); // Initialize activity timer
 
-            // 3. FORCE SAVE BEFORE REDIRECT (The Fix)
+            // CRITICAL: Save session data before redirecting
             session_write_close();
 
-            // 4. Redirect
             $redirect = $_SESSION['is_admin'] ? "/admin/admin_dashboard.php" : "/dashboard.php";
             header("Location: " . $redirect);
             exit;
@@ -236,65 +240,38 @@ button {
 </head>
 
 <body>
-
-<!-- NAVBAR -->
 <nav class="navbar">
     <div class="navbar__container">
-        <a href="index.html" id="navbar__logo">
-            <i class="fas fa-gem"></i>&nbsp;INTELLI RESOLVERS
-        </a>
+        <a href="index.html" id="navbar__logo"><i class="fas fa-gem"></i>&nbsp;INTELLI RESOLVERS</a>
         <ul class="navbar__menu">
             <li><a href="index.html" class="navbar__links">Home</a></li>
-            <li><a href="services.html" class="navbar__links">Services</a></li>
-            <li><a href="team.html" class="navbar__links">Team</a></li>
-            <li class="navbar__btn">
-                <a href="signinpage.php" class="button">Sign In</a>
-            </li>
+            <li class="navbar__btn"><a href="signinpage.php" class="button">Sign In</a></li>
         </ul>
     </div>
 </nav>
-
-<!-- SIGN IN -->
 <div class="signin-wrapper">
     <div class="signin-card">
         <h1>Sign In</h1>
         <p>Access your IntelliResolvers dashboard</p>
-
+        
         <?php if ($error): ?>
-            <div class="error"><?= $error ?></div>
+            <div class="error"><?= htmlspecialchars($error) ?></div>
+        <?php endif; ?>
+
+        <?php if ($info_message): ?>
+            <div class="success"><?= htmlspecialchars($info_message) ?></div>
         <?php endif; ?>
 
         <form method="POST">
-            <input type="hidden" name="csrf_token"
-                   value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
             <input type="email" name="email" placeholder="Email" required>
             <input type="password" name="password" placeholder="Password" required>
             <button type="submit">Sign In</button>
         </form>
     </div>
 </div>
-
-<!-- FOOTER -->
 <div class="footer__container">
-    <a href="index.html" id="footer__logo">
-        <i class="fas fa-gem"></i>INTELLI RESOLVERS
-    </a>
-    <div class="footer__links">
-        <div class="footer__link--items">
-            <h3>Support</h3>
-            <a href="privacypolicy.html">Privacy Policy</a>
-            <a href="termsofservice.html">Terms of Service</a>
-        </div>
-        <div class="footer__link--items">
-            <h3>About Us</h3>
-            <a href="contactus.html">Contact Us</a>
-            <a href="websitecredits.html">Website Credits</a>
-        </div>
-    </div>
-    <p class="website__rights">
-        © INTELLI RESOLVERS <?= date('Y') ?>. All rights reserved.
-    </p>
+    <p class="website__rights">© INTELLI RESOLVERS <?= date('Y') ?>. All rights reserved.</p>
 </div>
-
 </body>
 </html>
