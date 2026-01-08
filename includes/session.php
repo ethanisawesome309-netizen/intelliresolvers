@@ -1,44 +1,36 @@
 <?php
-declare(strict_types=1);
+// includes/session.php
 
-/**
- * Azure HTTPS fix
- */
-if (
-    (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) &&
-     $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
-    || (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-) {
-    $_SERVER['HTTPS'] = 'on';
+if (session_status() === PHP_SESSION_NONE) {
+    // Set cookie parameters for security and persistence
+    session_set_cookie_params([
+        'lifetime' => 0, // Cookie expires when browser closes
+        'path' => '/',
+        'domain' => '', 
+        'secure' => false, // Set to true if your site uses HTTPS
+        'httponly' => true, // Prevents JS from accessing session ID
+        'samesite' => 'Lax'
+    ]);
+
+    session_start();
 }
 
-/**
- * Use ONE session name only
- */
-session_name('INTELLISESSID');
+// ==================== TIMEOUT LOGIC ====================
+$timeout_duration = 1800; // 30 minutes in seconds
 
-/**
- * Session cookie settings
- */
-ini_set('session.cookie_domain', '.intelliresolvers.com');
-ini_set('session.cookie_path', '/');
-ini_set('session.use_only_cookies', '1');
-ini_set('session.use_strict_mode', '1');
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Lax');
-
-/**
- * Only set Secure if HTTPS is truly on
- */
-if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
-    ini_set('session.cookie_secure', '1');
+if (isset($_SESSION['last_activity'])) {
+    $elapsed_time = time() - $_SESSION['last_activity'];
+    
+    if ($elapsed_time > $timeout_duration) {
+        // Clear and destroy the session
+        session_unset();
+        session_destroy();
+        
+        // Redirect to login with a timeout flag
+        header("Location: /signinpage.php?error=timeout");
+        exit;
+    }
 }
 
-session_start();
-
-/**
- * CSRF token
- */
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
+// Update the timestamp so the 30-minute clock restarts on every page load
+$_SESSION['last_activity'] = time();
