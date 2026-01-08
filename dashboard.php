@@ -17,6 +17,6 @@ if (!empty($_SESSION['is_admin'])) {
 <html>
 <body>
   <div id="root"></div>
-  <script type="module" src="/assets/app.js"></script>
+  <script type="module" src="/assets/index.js"></script>
 </body>
 </html>
