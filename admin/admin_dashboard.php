@@ -1,11 +1,16 @@
 <?php
 require __DIR__ . "/../includes/session.php";
 
-if (empty($_SESSION['user_id']) || empty($_SESSION['is_admin'])) {
+if (
+    !isset($_SESSION['user_id']) ||
+    !isset($_SESSION['is_admin']) ||
+    $_SESSION['is_admin'] !== true
+) {
     http_response_code(403);
     exit("Access denied");
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
