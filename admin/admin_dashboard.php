@@ -1,9 +1,6 @@
 <?php
-declare(strict_types=1);
-
 require __DIR__ . "/../includes/session.php";
 
-// Enforce admin-only access
 if (
     empty($_SESSION['user_id']) ||
     empty($_SESSION['is_admin']) ||
@@ -20,7 +17,7 @@ if (
   <title>Admin Dashboard</title>
 </head>
 <body>
-  <div id="root">Loading admin dashboard…</div>
-  <script type="module" src="/assets/admin.js"></script>
+  <div id="root"></div>
+  <script type="module" src="/assets/admin.js"></cript>
 </body>
 </html>
