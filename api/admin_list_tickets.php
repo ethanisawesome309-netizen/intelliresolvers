@@ -2,14 +2,14 @@
 ob_start();
 header("Content-Type: application/json");
 
-// DEBUG (disable in prod)
+// ================= DEBUG MODE =================
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-$response = [
-    "success" => false,
-    "step" => null
-];
+// Allow seeing output even on 403
+http_response_code(200);
+
+$debug = [];
 
 try {
 
@@ -18,15 +18,25 @@ try {
         session_start();
     }
 
-    $response["step"] = "session_started";
+    $debug['step'] = 'session_started';
+    $debug['session_id'] = session_id();
+    $debug['session_name'] = session_name();
+    $debug['session'] = $_SESSION;
+
+    // ================= COOKIE DEBUG =================
+    $debug['cookies'] = $_COOKIE ?? [];
+    $debug['headers_sent'] = headers_sent();
 
     // ================= ADMIN CHECK =================
-    if (empty($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
-        http_response_code(403);
-        throw new Exception("Admin access required");
+    if (!isset($_SESSION['is_admin'])) {
+        throw new Exception("is_admin NOT SET in session");
     }
 
-    $response["step"] = "admin_verified";
+    if (!$_SESSION['is_admin']) {
+        throw new Exception("is_admin is set but FALSE/EMPTY");
+    }
+
+    $debug['step'] = 'admin_verified';
 
     // ================= DB =================
     require __DIR__ . "/../includes/db.php";
@@ -35,7 +45,7 @@ try {
         throw new Exception("Database connection missing");
     }
 
-    $response["step"] = "db_connected";
+    $debug['step'] = 'db_connected';
 
     // ================= QUERY =================
     $stmt = $conn->query("
@@ -51,18 +61,18 @@ try {
     ob_clean();
     echo json_encode([
         "success" => true,
-        "tickets" => $tickets
-    ]);
+        "tickets" => $tickets,
+        "debug" => $debug
+    ], JSON_PRETTY_PRINT);
+    exit;
 
 } catch (Throwable $e) {
 
     ob_clean();
-    http_response_code(403);
-
     echo json_encode([
         "success" => false,
         "error" => $e->getMessage(),
-        "step" => $response["step"],
-        "session" => $_SESSION ?? null
-    ]);
+        "debug" => $debug
+    ], JSON_PRETTY_PRINT);
+    exit;
 }
