@@ -1,11 +1,7 @@
 <?php
 // ================= CANONICAL DOMAIN =================
 if ($_SERVER['HTTP_HOST'] !== 'intelliresolvers.com') {
-    header(
-        "Location: https://intelliresolvers.com" . $_SERVER['REQUEST_URI'],
-        true,
-        301
-    );
+    header("Location: https://intelliresolvers.com" . $_SERVER['REQUEST_URI'], true, 301);
     exit;
 }
 
@@ -32,12 +28,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email    = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
 
-        $stmt = $conn->prepare(
-            "SELECT id, password_hash, is_admin
-             FROM users
-             WHERE email = :email
-             LIMIT 1"
-        );
+        $stmt = $conn->prepare("
+            SELECT id, password_hash, is_admin
+            FROM users
+            WHERE email = :email
+            LIMIT 1
+        ");
         $stmt->execute(['email' => $email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -48,13 +44,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_id']  = (int)$user['id'];
             $_SESSION['is_admin'] = (bool)$user['is_admin'];
 
-            // ✅ DEFINE THIS (THIS WAS MISSING)
-            $isAdmin = $_SESSION['is_admin'];
-
-            if ($isAdmin) {
+            if ($_SESSION['is_admin']) {
                 header("Location: /admin/admin_dashboard.php");
             } else {
-                header("Location: dashboard.php");
+                header("Location: /dashboard.php");
             }
             exit;
 
