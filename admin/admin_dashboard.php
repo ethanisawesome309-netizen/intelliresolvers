@@ -1,16 +1,18 @@
 <?php
+declare(strict_types=1);
+
 require __DIR__ . "/../includes/session.php";
 
+// Enforce admin-only access
 if (
-    !isset($_SESSION['user_id']) ||
-    !isset($_SESSION['is_admin']) ||
+    empty($_SESSION['user_id']) ||
+    empty($_SESSION['is_admin']) ||
     $_SESSION['is_admin'] !== true
 ) {
     http_response_code(403);
-    exit("Access denied");
+    exit("403 Forbidden");
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
