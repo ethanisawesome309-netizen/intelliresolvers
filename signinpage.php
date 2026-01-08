@@ -8,15 +8,6 @@ $error = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // CSRF validation
-    if (
-        empty($_POST['csrf_token']) ||
-        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
-    ) {
-        http_response_code(400);
-        exit("Invalid CSRF token");
-    }
-
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
@@ -31,25 +22,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($user && password_verify($password, $user['password_hash'])) {
 
+        // Prevent session fixation
         session_regenerate_id(true);
 
         $_SESSION['user_id']  = (int)$user['id'];
         $_SESSION['is_admin'] = (bool)$user['is_admin'];
 
-        header("Location: " . ($_SESSION['is_admin']
-            ? "/admin/admin_dashboard.php"
-            : "/dashboard.php"
+        header("Location: " . (
+            $_SESSION['is_admin']
+                ? "/admin/admin_dashboard.php"
+                : "/dashboard.php"
         ));
         exit;
     }
 
     $error = "Invalid email or password";
 }
-
-
 ?>
-<!-- HTML BELOW UNCHANGED -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
