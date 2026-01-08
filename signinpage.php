@@ -48,6 +48,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_id']  = (int)$user['id'];
             $_SESSION['is_admin'] = (bool)$user['is_admin'];
 
+            session_write_close();
+
             // ✅ ROLE-BASED REDIRECT
             if ($_SESSION['is_admin']) {
                 header("Location: /admin/admin_dashboard.php");
