@@ -1,63 +1,96 @@
 <?php
-// Start output buffering to prevent HTML warnings breaking JSON
 ob_start();
-
-// JSON response header
 header("Content-Type: application/json");
 
-// Show errors for development (set to 0 in production)
+// DEBUG MODE
 ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-// Start session only if none exists
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// Include DB connection and session helpers
-require __DIR__ . "/../includes/db.php";       // make sure this defines $pdo
-require __DIR__ . "/../includes/session.php";  // optional session helpers
+$response = [
+    "success" => false,
+    "step" => null,
+    "details" => null
+];
 
 try {
-    // Check if admin
-    if (empty($_SESSION['is_admin'])) {
-        throw new Exception("Forbidden: not admin", 403);
+    /* =========================
+       STEP 1: SESSION START
+    ========================== */
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
     }
 
-    // Ensure $pdo exists
+    $response["step"] = "session_started";
+    $response["session_id"] = session_id();
+    $response["session_data"] = $_SESSION;
+
+    /* =========================
+       STEP 2: ADMIN CHECK
+    ========================== */
+    if (!isset($_SESSION['is_admin'])) {
+        throw new Exception("Session exists but is_admin is NOT set");
+    }
+
+    if ($_SESSION['is_admin'] !== true) {
+        throw new Exception("User is logged in but NOT an admin");
+    }
+
+    $response["step"] = "admin_verified";
+
+    /* =========================
+       STEP 3: DB INCLUDE
+    ========================== */
+    require __DIR__ . "/../includes/db.php";
+
     if (!isset($pdo)) {
-        throw new Exception("Database connection not found");
+        throw new Exception("db.php included but \$pdo is missing");
     }
 
-    // Fetch tickets
-    $stmt = $pdo->query("
+    $response["step"] = "database_connected";
+
+    /* =========================
+       STEP 4: QUERY EXECUTION
+    ========================== */
+    $sql = "
         SELECT t.id, t.title, t.message, t.status, t.created_at,
                u.email
         FROM tickets t
         JOIN users u ON u.id = t.user_id
         ORDER BY t.created_at DESC
-    ");
+    ";
+
+    $stmt = $pdo->query($sql);
+    if (!$stmt) {
+        throw new Exception("SQL query failed");
+    }
 
     $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Clear any accidental HTML output
-    ob_clean();
+    $response["step"] = "query_success";
+    $response["tickets_count"] = count($tickets);
 
+    /* =========================
+       SUCCESS RESPONSE
+    ========================== */
+    ob_clean();
     echo json_encode([
         "success" => true,
+        "message" => "Admin tickets loaded successfully",
+        "debug" => $response,
         "tickets" => $tickets
     ]);
 
-} catch (Exception $e) {
-    // Clear buffer in case warnings/notices output HTML
-    ob_clean();
+} catch (Throwable $e) {
 
-    $code = $e->getCode() ?: 500;
-    http_response_code($code);
+    ob_clean();
+    http_response_code(403);
 
     echo json_encode([
         "success" => false,
-        "error" => $e->getMessage()
+        "message" => "Admin ticket load failed",
+        "failed_step" => $response["step"],
+        "error" => $e->getMessage(),
+        "session_id" => session_id() ?: null,
+        "session_data" => $_SESSION ?? null
     ]);
 }
