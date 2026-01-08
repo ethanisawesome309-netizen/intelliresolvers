@@ -5,41 +5,32 @@ header("Content-Type: application/json");
 // ================= DEBUG MODE =================
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
-
-// Allow seeing output even on 403
 http_response_code(200);
 
 $debug = [];
 
 try {
-
-    // ================= SESSION =================
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    // USE THE SHARED SESSION FILE
+    require __DIR__ . '/includes/session.php';
 
     $debug['step'] = 'session_started';
     $debug['session_id'] = session_id();
-    $debug['session_name'] = session_name();
     $debug['session'] = $_SESSION;
-
-    // ================= COOKIE DEBUG =================
     $debug['cookies'] = $_COOKIE ?? [];
-    $debug['headers_sent'] = headers_sent();
 
     // ================= ADMIN CHECK =================
     if (!isset($_SESSION['is_admin'])) {
-        throw new Exception("is_admin NOT SET in session");
+        throw new Exception("Access Denied: is_admin NOT SET in session. Please log in again.");
     }
 
-    if (!$_SESSION['is_admin']) {
-        throw new Exception("is_admin is set but FALSE/EMPTY");
+    if ($_SESSION['is_admin'] !== true) {
+        throw new Exception("Access Denied: You do not have administrator privileges.");
     }
 
     $debug['step'] = 'admin_verified';
 
     // ================= DB =================
-    require __DIR__ . "/../includes/db.php";
+    require __DIR__ . "/includes/db.php";
 
     if (!isset($conn)) {
         throw new Exception("Database connection missing");
@@ -49,8 +40,7 @@ try {
 
     // ================= QUERY =================
     $stmt = $conn->query("
-        SELECT t.id, t.title, t.message, t.status, t.created_at,
-               u.email
+        SELECT t.id, t.title, t.message, t.status, t.created_at, u.email
         FROM tickets t
         JOIN users u ON u.id = t.user_id
         ORDER BY t.created_at DESC
@@ -67,7 +57,6 @@ try {
     exit;
 
 } catch (Throwable $e) {
-
     ob_clean();
     echo json_encode([
         "success" => false,
