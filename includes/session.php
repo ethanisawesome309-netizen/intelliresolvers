@@ -1,15 +1,16 @@
 <?php
 declare(strict_types=1);
 
-// Enforce strict session handling
 ini_set('session.use_strict_mode', '1');
+ini_set('session.cookie_secure', '1');
+ini_set('session.cookie_httponly', '1');
 
 if (session_status() === PHP_SESSION_NONE) {
 
     session_set_cookie_params([
         'lifetime' => 0,
         'path'     => '/',
-        'domain'   => 'intelliresolvers.com', // IMPORTANT
+        'domain'   => 'intelliresolvers.com',
         'secure'   => true,
         'httponly' => true,
         'samesite' => 'Lax'
@@ -18,7 +19,11 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// CSRF token (safe to include everywhere)
+// DEBUG FLAG
+if (!defined('SESSION_DEBUG')) {
+    define('SESSION_DEBUG', true);
+}
+
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
