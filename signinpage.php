@@ -1,60 +1,36 @@
 <?php
-// ================= CANONICAL DOMAIN =================
-if ($_SERVER['HTTP_HOST'] !== 'intelliresolvers.com') {
-    header("Location: https://intelliresolvers.com" . $_SERVER['REQUEST_URI'], true, 301);
-    exit;
-}
-
 require __DIR__ . "/includes/session.php";
 require __DIR__ . "/includes/db.php";
 
-// ================= CSRF =================
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
-$error = "";
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    if (
-        empty($_POST['csrf_token']) ||
-        empty($_SESSION['csrf_token']) ||
-        !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])
-    ) {
-        $error = "Security error. Refresh and try again.";
-    } else {
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-        $email    = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
+    $stmt = $conn->prepare("
+        SELECT id, password_hash, is_admin
+        FROM users
+        WHERE email = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        $stmt = $conn->prepare("
-            SELECT id, password_hash, is_admin
-            FROM users
-            WHERE email = :email
-            LIMIT 1
-        ");
-        $stmt->execute(['email' => $email]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($user && password_verify($password, $user['password_hash'])) {
 
-        if ($user && password_verify($password, $user['password_hash'])) {
+        session_regenerate_id(true);
 
-            session_regenerate_id(true);
+        $_SESSION['user_id'] = (int)$user['id'];
+        $_SESSION['is_admin'] = (bool)$user['is_admin'];
 
-            $_SESSION['user_id']  = (int)$user['id'];
-            $_SESSION['is_admin'] = (bool)$user['is_admin'];
-
-            if ($_SESSION['is_admin']) {
-                header("Location: /admin/admin_dashboard.php");
-            } else {
-                header("Location: /dashboard.php");
-            }
-            exit;
-
-        } else {
-            $error = "Invalid email or password.";
-        }
+        header("Location: " . ($_SESSION['is_admin']
+            ? "/admin/admin_dashboard.php"
+            : "/dashboard.php"
+        ));
+        exit;
     }
+
+    $error = "Invalid login";
 }
 ?>
 <!DOCTYPE html>
