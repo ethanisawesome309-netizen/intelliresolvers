@@ -1,23 +1,19 @@
 <?php
-if ($_SERVER['HTTP_HOST'] !== 'intelliresolvers.com') {
-    header(
-        "Location: https://intelliresolvers.com" . $_SERVER['REQUEST_URI'],
-        true,
-        301
-    );
-    exit;
-}
+declare(strict_types=1);
 
 require __DIR__ . "/includes/session.php";
 
-if (!isset($_SESSION['user_id'])) {
-    header("Location: signinpage.php");
+// Must be logged in
+if (empty($_SESSION['user_id'])) {
+    header("Location: /signinpage.php");
     exit;
 }
 
-header("Cache-Control: no-cache, no-store, must-revalidate");
-header("Pragma: no-cache");
-header("Expires: 0");
+// Admins should NOT see user dashboard
+if (!empty($_SESSION['is_admin'])) {
+    header("Location: /admin/admin_dashboard.php");
+    exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
