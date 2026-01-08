@@ -1,6 +1,8 @@
 <?php
 ob_start();
 header("Content-Type: application/json");
+
+// Enable full PHP error reporting (development only)
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -11,14 +13,12 @@ require __DIR__ . "/../includes/db.php";
 require __DIR__ . "/../includes/session.php";
 
 try {
-    // Debug: show session for testing
-    // Uncomment this line temporarily if needed
-    // echo json_encode($_SESSION); exit;
-
+    // Check admin session
     if (empty($_SESSION['is_admin'])) {
         throw new Exception("Forbidden: not admin", 403);
     }
 
+    // Fetch tickets from database
     $stmt = $pdo->query(
         "SELECT t.id, t.title, t.message, t.status, t.created_at,
                 u.email
@@ -29,6 +29,7 @@ try {
 
     $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Clean output buffer and return JSON
     ob_clean();
     echo json_encode([
         "success" => true,
