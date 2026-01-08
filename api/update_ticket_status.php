@@ -1,27 +1,53 @@
 <?php
-require __DIR__ . "/../includes/session.php";
-require __DIR__ . "/../includes/db.php";
+// api/update_ticket_status.php
+ob_start();
+header("Content-Type: application/json");
 
-if (empty($_SESSION['is_admin'])) {
-    http_response_code(403);
+try {
+    // 1. Correct relative paths to includes
+    require_once __DIR__ . "/../includes/session.php";
+    require_once __DIR__ . "/../includes/db.php";
+
+    // 2. Admin Check
+    if (empty($_SESSION['is_admin'])) {
+        http_response_code(403);
+        echo json_encode(["success" => false, "error" => "Unauthorized access"]);
+        exit;
+    }
+
+    // 3. Parse JSON Input from React
+    $data = json_decode(file_get_contents("php://input"), true);
+    $id = (int)($data['id'] ?? 0);
+    $status = $data['status'] ?? '';
+
+    // 4. Validation
+    $allowed = ['Open', 'In Progress', 'Closed'];
+
+    if (!$id || !in_array($status, $allowed)) {
+        http_response_code(400);
+        echo json_encode(["success" => false, "error" => "Invalid ticket ID or status"]);
+        exit;
+    }
+
+    // 5. Update Database (Fixed $pdo to $conn)
+    if (!isset($conn)) {
+        throw new Exception("Database connection variable '\$conn' is missing.");
+    }
+
+    $stmt = $conn->prepare("UPDATE tickets SET status = ? WHERE id = ?");
+    $stmt->execute([$status, $id]);
+
+    // 6. Return Success
+    ob_clean();
+    echo json_encode(["success" => true]);
+    exit;
+
+} catch (Throwable $e) {
+    ob_clean();
+    http_response_code(500);
+    echo json_encode([
+        "success" => false, 
+        "error" => $e->getMessage()
+    ]);
     exit;
 }
-
-$data = json_decode(file_get_contents("php://input"), true);
-
-$id = (int)($data['id'] ?? 0);
-$status = $data['status'] ?? '';
-
-$allowed = ['Open', 'In Progress', 'Closed'];
-
-if (!$id || !in_array($status, $allowed)) {
-    http_response_code(400);
-    exit;
-}
-
-$stmt = $pdo->prepare(
-    "UPDATE tickets SET status = ? WHERE id = ?"
-);
-$stmt->execute([$status, $id]);
-
-echo json_encode(["success" => true]);
