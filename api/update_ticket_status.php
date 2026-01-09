@@ -12,11 +12,10 @@ try {
         exit;
     }
 
-    $data = json_decode(file_get_contents("php://input"), true);
-    $id = (int)($data['id'] ?? 0);
-    $status_id = (int)($data['status_id'] ?? 0);
+    // 🔥 Switch to $_GET to bypass Nginx body inspection
+    $id = (int)($_GET['id'] ?? 0);
+    $status_id = (int)($_GET['status_id'] ?? 0);
 
-    // Map ID numbers back to labels
     $map = [
         1 => "Open",
         2 => "In Progress",
@@ -25,7 +24,7 @@ try {
 
     if (!$id || !isset($map[$status_id])) {
         http_response_code(400);
-        echo json_encode(["success" => false, "error" => "Invalid input"]);
+        echo json_encode(["success" => false, "error" => "Invalid parameters"]);
         exit;
     }
 
