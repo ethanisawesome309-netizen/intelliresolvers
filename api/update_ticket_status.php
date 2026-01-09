@@ -17,20 +17,20 @@ try {
 
     // 3. Parse JSON Input from React
     $data = json_decode(file_get_contents("php://input"), true);
-    $id = (int)($data['id'] ?? 0);
-    $status = $data['status'] ?? '';
-
-    // 🔥 NEW: Map the hyphenated value back to the database-friendly space value
-    if ($status === "In-Progress") {
-        $status = "In Progress";
-    }
+    
+    // Explicitly cast and sanitize
+    $id = isset($data['id']) ? (int)$data['id'] : 0;
+    $status = isset($data['status']) ? trim($data['status']) : '';
 
     // 4. Validation
     $allowed = ['Open', 'In Progress', 'Closed'];
 
     if (!$id || !in_array($status, $allowed)) {
         http_response_code(400);
-        echo json_encode(["success" => false, "error" => "Invalid ticket ID or status"]);
+        echo json_encode([
+            "success" => false, 
+            "error" => "Invalid ticket ID or status: " . $status
+        ]);
         exit;
     }
 
@@ -44,7 +44,7 @@ try {
 
     // 6. Return Success
     ob_clean();
-    echo json_encode(["success" => true]);
+    echo json_encode(["success" => true, "id" => $id, "new_status" => $status]);
     exit;
 
 } catch (Throwable $e) {
