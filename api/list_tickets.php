@@ -10,12 +10,15 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// CONCEPT: Join with 'statuses' table so the user sees 
+// "Open" instead of just "1"
 $stmt = $conn->prepare(
-    "SELECT id, title, message, status
-     FROM tickets
-     WHERE user_id = :uid
-     ORDER BY id DESC"
+    "SELECT t.id, t.title, t.message, s.label as status
+     FROM tickets t
+     INNER JOIN statuses s ON t.status_id = s.id
+     WHERE t.user_id = :uid
+     ORDER BY t.id DESC"
 );
 
 $stmt->execute(['uid' => $_SESSION['user_id']]);
-echo json_encode($stmt->fetchAll());
+echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
