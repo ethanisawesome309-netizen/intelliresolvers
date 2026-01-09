@@ -1,42 +1,42 @@
 <?php
 ob_start();
 header("Content-Type: application/json");
+
+ini_set('display_errors', 1);
 error_reporting(E_ALL);
-ini_set('display_errors', 0);
 
-require_once __DIR__ . "/../includes/session.php";
-require_once __DIR__ . "/../includes/db.php";
-
-/* --- ADMIN CHECK --- */
-if (empty($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
-    http_response_code(403);
-    echo json_encode([
-        "success" => false,
-        "error" => "Unauthorized access",
-        "debug" => [
-            "session" => $_SESSION
-        ]
-    ]);
-    exit;
-}
-
-/* --- FETCH TICKETS --- */
 try {
-    $stmt = $conn->prepare("SELECT id, title, email, message, status_id FROM tickets ORDER BY id DESC");
-    $stmt->execute();
+    require_once __DIR__ . '/../includes/session.php';
+    require_once __DIR__ . '/../includes/db.php';
+
+    // ================= ADMIN CHECK =================
+    if (!isset($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
+        http_response_code(403);
+        throw new Exception("Unauthorized access. Admin privileges required.");
+    }
+
+
+    $stmt = $conn->query("
+        SELECT t.id, t.title, t.message, t.status, t.created_at, u.email
+        FROM tickets t
+        JOIN users u ON u.id = t.user_id
+        ORDER BY t.created_at DESC
+    ");
+
     $tickets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    ob_clean();
     echo json_encode([
         "success" => true,
         "tickets" => $tickets
-    ]);
+    ], JSON_PRETTY_PRINT);
     exit;
+
 } catch (Throwable $e) {
-    http_response_code(500);
+    ob_clean();
     echo json_encode([
         "success" => false,
-        "error" => $e->getMessage(),
-        "trace" => $e->getTraceAsString()
-    ]);
+        "error" => $e->getMessage()
+    ], JSON_PRETTY_PRINT);
     exit;
 }
