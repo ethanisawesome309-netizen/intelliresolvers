@@ -23,9 +23,7 @@ if (empty($_SESSION['is_admin']) || $_SESSION['is_admin'] !== true) {
     echo json_encode([
         "success" => false,
         "error" => "Unauthorized access",
-        "debug" => [
-            "session" => $_SESSION
-        ]
+        "debug" => ["session" => $_SESSION]
     ]);
     exit;
 }
@@ -36,13 +34,7 @@ $data = json_decode(file_get_contents("php://input"), true);
 $id = (int)($data['id'] ?? 0);
 $status_id = (int)($data['status_id'] ?? 0);
 
-$map = [
-    1 => "Open",
-    2 => "In Progress",
-    3 => "Closed"
-];
-
-if (!$id || !isset($map[$status_id])) {
+if (!$id || !in_array($status_id, [1,2,3])) {
     http_response_code(400);
     echo json_encode([
         "success" => false,
@@ -52,13 +44,22 @@ if (!$id || !isset($map[$status_id])) {
 }
 
 /* --- UPDATE --- */
-$stmt = $conn->prepare("UPDATE tickets SET status = ? WHERE id = ?");
-$stmt->execute([$map[$status_id], $id]);
+try {
+    $stmt = $conn->prepare("UPDATE tickets SET status_id = ? WHERE id = ?");
+    $stmt->execute([$status_id, $id]);
 
-ob_clean();
-echo json_encode([
-    "success" => true,
-    "id" => $id,
-    "status" => $map[$status_id]
-]);
-exit;
+    echo json_encode([
+        "success" => true,
+        "id" => $id,
+        "status_id" => $status_id
+    ]);
+    exit;
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode([
+        "success" => false,
+        "error" => $e->getMessage(),
+        "trace" => $e->getTraceAsString()
+    ]);
+    exit;
+}
