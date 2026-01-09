@@ -20,6 +20,11 @@ try {
     $id = (int)($data['id'] ?? 0);
     $status = $data['status'] ?? '';
 
+    // 🔥 NEW: Map the hyphenated value back to the database-friendly space value
+    if ($status === "In-Progress") {
+        $status = "In Progress";
+    }
+
     // 4. Validation
     $allowed = ['Open', 'In Progress', 'Closed'];
 
