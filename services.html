@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Services - INTELLI RESOLVERS</title>
+  <script src="https://kit.fontawesome.com/9f925d73ef.js" crossorigin="anonymous"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@100..900&display=swap" rel="stylesheet">
+
+  <style>
+    * { 
+      box-sizing: border-box; 
+      margin: 0; padding: 0; 
+      font-family: 'Kumbh Sans', sans-serif; 
+    }
+
+    body { 
+      background: #141414; 
+      color: #fff; 
+      display: flex; 
+      flex-direction: column; 
+      min-height: 100vh; 
+    }
+
+    /* NAVBAR */
+    .navbar { 
+      background: #131313; 
+      height: 80px; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      font-size: 1.2rem; 
+      position: sticky; 
+      top: 0; z-index: 999; 
+    }
+
+    .navbar__container { 
+      display: flex; 
+      justify-content: space-between;
+      width: 100%; 
+      max-width: 1300px; 
+      padding: 0 50px; 
+      align-items: center; 
+    }
+
+    #navbar__logo { 
+      background: linear-gradient(to top, #ff0844 0%, #ffb199 100%); 
+      -webkit-background-clip: text; 
+      -webkit-text-fill-color: transparent; 
+      font-size: 2rem; 
+      display: flex; 
+      align-items: center; 
+      cursor: pointer; 
+      text-decoration: none; 
+    }
+
+    .fa-gem { 
+      margin-right: 0.5rem; 
+    }
+
+    .navbar__menu { 
+      display: flex; 
+      align-items: center; 
+      list-style: none; 
+    }
+
+    .navbar__item { 
+      height: 80px; 
+    }
+    .navbar__links { 
+      color: #fff; 
+      text-decoration: none; 
+      padding: 0 1rem; 
+      display: flex; 
+      align-items: center; 
+      height: 100%; 
+    }
+
+    .navbar__links:hover { 
+      color: #f77062; 
+      transition: 0.3s ease; 
+    }
+
+    .navbar__btn .button { 
+      text-decoration: none; 
+      background: linear-gradient(to right, #f77062, #fe5196); 
+      color: #fff; 
+      padding: 10px 20px; 
+      border-radius: 4px; 
+      transition: 0.3s; 
+    }
+    .navbar__btn .button:hover { 
+      background: #4837ff; 
+    }
+
+    /* HAMBURGER */
+    .navbar__toggle { 
+      display: none; 
+      flex-direction: column; 
+      cursor: pointer; 
+    }
+
+    .bar { 
+      height: 3px; 
+      width: 25px; 
+      margin: 5px auto; 
+      background: #fff; 
+      transition: all 0.3s ease; 
+    }
+
+    @media screen and (max-width: 960px) {
+      .navbar__toggle { 
+        display: flex; 
+      }
+
+      .navbar__menu { 
+        flex-direction: column; 
+        position: absolute; 
+        top: -1000px; 
+        left: 0; 
+        width: 100%; 
+        opacity: 0; 
+        background: #131313; 
+        transition: all 0.5s ease; 
+        z-index: -1; 
+      }
+
+      .navbar__menu.active { 
+        top: 100%; 
+        opacity: 1; 
+        z-index: 99; 
+        font-size: 1.6rem; 
+        height: 50vh; 
+      }
+
+      #mobile-menu.is-active .bar:nth-child(2) { opacity: 0; }
+      #mobile-menu.is-active .bar:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+      #mobile-menu.is-active .bar:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+    }
+/*BANNER*/
+
+.hero-banner {
+  width: 100%;
+  height: 50vh; 
+  background-image: url('/images/hero-banner.jpg'); 
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.hero-banner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.55); 
+}
+
+.hero-banner__content {
+  position: relative;
+  text-align: center;
+  z-index: 1;
+  max-width: 1000px;
+  padding: 0 1rem;
+}
+
+.hero-banner__content h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  line-height: 1.2;
+  background: linear-gradient(to top, #ff0844 0%, #f1b199 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -moz-background-clip: text;
+  -moz-text-fill-color: transparent;
+}
+
+.hero-banner__content p {
+  font-size: 1.2rem;
+  color: #ddd;
+  font-weight: 500;
+}
+
+@media screen and (max-width: 768px) {
+  .hero-banner {
+    height: 40vh;
+  }
+  .hero-banner__content h1 {
+    font-size: 1.8rem;
+  }
+  .hero-banner__content p {
+    font-size: 1rem;
+  }
+}
+
+    /* SERVICES  */
+    .services { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      padding: 4rem 1rem; 
+      max-width: 1200px; 
+      margin: 0 auto; 
+    }
+
+    .services h1 { 
+      font-size: 2.5rem; 
+      margin-bottom: 3rem; 
+      background: linear-gradient(to right, #ff8177 0%, #b12a5b 100%); 
+      -webkit-background-clip: text; 
+      -webkit-text-fill-color: transparent; 
+    }
+
+    .services__container { 
+      display: flex; 
+      flex-wrap: wrap; 
+      justify-content: center; 
+      gap: 2rem; 
+    }
+
+    .services__card { 
+      width: 300px; 
+      height: 450px; 
+      border-radius: 8px; 
+      background: #1f1f1f; 
+      padding: 2rem; 
+      position: relative; 
+      transition: transform 0.3s ease; 
+    }
+
+    .services__card:hover { 
+      transform: scale(1.05); 
+      cursor: pointer; 
+    }
+
+    .services__card h3 { 
+      font-size: 1.5rem; 
+      margin-bottom: 1rem; 
+      background: linear-gradient(to top, #f77062 0%, #fe5196 100%); 
+      -webkit-background-clip: text; 
+      -webkit-text-fill-color: transparent; 
+    }
+
+    .services__card p { 
+      font-size: 1rem; 
+      color: #ccc; 
+    }
+
+    /* FOOTER */
+    .footer__container { 
+      background-color: #141414; 
+      padding: 5rem 0; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+    }
+
+    #footer__logo { 
+      color: #fff; 
+      text-decoration: none; 
+      font-size: 2rem; 
+      display: flex; 
+      align-items: center; 
+      margin-bottom: 1.5rem; 
+    }
+
+    #footer__logo i { 
+      color: #f77062; 
+      margin-right: 0.5rem; 
+    }
+
+    .footer__links { 
+      display: flex; 
+      justify-content: center; 
+      flex-wrap: wrap; 
+      gap: 3rem; 
+      margin-bottom: 2rem; 
+    }
+
+    .footer__link--items { 
+      display: flex; 
+      flex-direction: column; 
+    }
+    .footer__link--items h3 { 
+      color: #f77062; 
+      margin-bottom: 1rem; 
+    }
+    .footer__link--items a { 
+      color: #fff; 
+      text-decoration: none; 
+      margin-bottom: 0.5rem;
+    }
+    .footer__link--items a:hover { 
+      color: #f77062; 
+    }
+
+    .website__rights { 
+      color: #777; 
+      font-size: 0.8rem; 
+      text-align: center; 
+    }
+    .social__icons a { 
+      color: #fff; 
+      margin: 0 10px; 
+      font-size: 1.2rem; 
+      transition: 0.3s; 
+    }
+    .social__icons a:hover { 
+      color: #f77062; 
+    }
+  </style>
+</head>
+<body>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar__container">
+      <a href="index.html" id="navbar__logo"><i class="fas fa-gem"></i>INTELLI RESOLVERS</a>
+      <div class="navbar__toggle" id="mobile-menu">
+        <span class="bar"></span>
+        <span class="bar"></span>
+        <span class="bar"></span>
+      </div>
+      <ul class="navbar__menu">
+        <li class="navbar__item"><a href="index.html" class="navbar__links">Home</a></li>
+        <li class="navbar__item"><a href="services.html" class="navbar__links">Services</a></li>
+        <li class="navbar__item"><a href="team.html" class="navbar__links">Team</a></li>
+        <li class="navbar__btn"><a href="Signinpage.php" class="button">Sign In</a></li>
+      </ul>
+    </div>
+  </nav>
+
+<section class="hero-banner">
+  <div class="hero-banner__content">
+    <h1>Reliable Cloud & IT Solutions</h1>
+    <p>Secure, scalable, and optimized for your business growth</p>
+  </div>
+</section>
+
+  <!-- SERVICES -->
+  <section class="services">
+    <h1>What We Offer</h1>
+    <div class="services__container">
+      <div class="services__card">
+        <h3>Web Development</h3>
+        <p>
+          We build fast, secure, and responsive websites that behave like reliable infrastructure for your business.
+          From landing pages to full web applications, we focus on clean architecture, uptime, and scalability.
+        </p>
+        <p>
+          • Custom business sites and portals<br>
+          • Mobile-first responsive layouts<br>
+          • Integration with databases and APIs<br>
+          • Performance tuning and optimization<br>
+          • Ongoing maintenance and enhancements
+        </p>
+      </div>
+
+      <div class="services__card">
+        <h3>Digital Marketing</h3>
+        <p>
+          Turn data into growth. We design, launch, and optimize campaigns that are measurable and repeatable, so
+          your marketing engine runs as reliably as your IT stack.
+        </p>
+        <p>
+          • SEO and on-page optimization<br>
+          • Google & social ad campaigns<br>
+          • Analytics, tracking, and reporting<br>
+          • Conversion rate optimization<br>
+          • Content and landing page strategy
+        </p>
+      </div>
+
+      <div class="services__card">
+        <h3>Graphic Design</h3>
+        <p>
+          Your brand should look as strong as the technology behind it. We create visuals that stay consistent
+          across web, social, and print, giving you a professional, unified identity.
+        </p>
+        <p>
+          • Logos and brand identity systems<br>
+          • Web & app UI elements<br>
+          • Social media and ad creatives<br>
+          • Presentations and print materials<br>
+          • Reusable brand guidelines & assets
+        </p>
+      </div>
+
+      <div class="services__card">
+        <h3>IT Consulting</h3>
+        <p>
+          We bridge business goals with practical technology. Our team helps you assess your current environment,
+          plan future growth, and implement solutions that are secure, resilient, and cost-effective.
+        </p>
+        <p>
+          • IT strategy and roadmap planning<br>
+          • System and workflow analysis<br>
+          • Cloud and hosting recommendations<br>
+          • Security best practices reviews<br>
+          • Lifecycle & modernization planning
+        </p>
+      </div>
+
+      <div class="services__card">
+        <h3>Hosting & Uptime Management</h3>
+        <p>
+          Your website and applications should be available whenever your customers need them. We design hosting
+          setups with reliability, monitoring, and redundancy in mind.
+        </p>
+        <p>
+          • Managed hosting and server setup<br>
+          • Uptime and performance monitoring<br>
+          • SSL, domains, and DNS configuration<br>
+          • Scaling for traffic spikes<br>
+          • Incident response and troubleshooting
+        </p>
+      </div>
+
+      <div class="services__card">
+        <h3>Data Protection & Backup</h3>
+        <p>
+          Data loss and downtime are never part of the plan. We help you protect critical data with backup and
+          recovery strategies designed around your business needs.
+        </p>
+        <p>
+          • Automated website & database backups<br>
+          • Secure off-site and cloud storage<br>
+          • Backup health checks and test restores<br>
+          • RPO/RTO planning for recovery<br>
+          • Guidance on security & compliance
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <div class="footer__container">
+    <a href="index.html" id="footer__logo"><i class="fas fa-gem"></i>INTELLI RESOLVERS</a>
+    <div class="footer__links">
+      <div class="footer__link--items">
+        <h3>Support</h3>
+        <a href="privacypolicy.html">Privacy Policy</a>
+        <a href="termsofservice.html">Terms of Service</a>
+      </div>
+      <div class="footer__link--items">
+        <h3>About Us</h3>
+        <a href="contactus.html">Contact Us</a>
+        <a href="websitecredits.html">Website Credits</a>
+      </div>
+    </div>
+    <div class="social__icons">
+      <a href="#"><i class="fab fa-facebook"></i></a>
+      <a href="#"><i class="fab fa-instagram"></i></a>
+      <a href="#"><i class="fab fa-twitter"></i></a>
+      <a href="#"><i class="fab fa-youtube"></i></a>
+      <a href="#"><i class="fab fa-linkedin"></i></a>
+    </div>
+    <p class="website__rights">© INTELLI RESOLVERS 2025. All rights reserved.</p>
+  </div>
+
+  <!-- JS MOBILE MENU -->
+  <script>
+    const mobileMenu = document.getElementById('mobile-menu');
+    const navbarMenu = document.querySelector('.navbar__menu');
+    mobileMenu.addEventListener('click', () => {
+      navbarMenu.classList.toggle('active');
+      mobileMenu.classList.toggle('is-active');
+    });
+  </script>
+</body>
+</html>
