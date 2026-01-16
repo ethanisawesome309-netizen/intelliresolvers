@@ -1,15 +1,28 @@
 server {
     listen 80;
-    root /var/www/html;
+    # Azure Web Apps use this path for your deployed files
+    root /home/site/wwwroot; 
     index index.php index.html;
 
     location / {
         try_files $uri $uri/ /index.php?$args;
     }
 
+    # SOCKET.IO PROXY (Fixes the WebSocket errors)
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # PHP-FPM CONNECTION
     location ~ \.php$ {
         include fastcgi_params;
-        fastcgi_pass 127.0.0.1:9000;
+        # Standard Azure PHP socket path
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock; 
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
     }
 }
