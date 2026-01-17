@@ -56,7 +56,8 @@ io.on("connection", (socket) => {
   });
 });
 
-// 6️⃣ START SERVER (THIS FIXES 404)
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Socket.IO server running on port ${PORT}`);
+// Replace your Step 6 with this:
+const INTERNAL_NODE_PORT = 3001; 
+httpServer.listen(INTERNAL_NODE_PORT, () => {
+  console.log(`🚀 Socket.IO internal bridge running on port ${INTERNAL_NODE_PORT}`);
 });
