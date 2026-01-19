@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . "/../includes/session.php";
 require __DIR__ . "/../includes/db.php";
+require __DIR__ . "/../includes/RedisClient.php"; // ✅ Import your tiny client
 
 header("Content-Type: application/json");
 
@@ -37,29 +38,21 @@ try {
 
     // 2. --- REAL-TIME NOTIFICATION ---
     try {
-        if (!class_exists('Redis')) {
-            error_log("CRITICAL: Redis extension not loaded for create_ticket.php");
-        } else {
-            $redis = new Redis();
-            // Use '127.0.0.1' explicitly
-            $connected = $redis->connect('127.0.0.1', 6379);
+        // ✅ Use the manual socket client (no extension required)
+        $redis = new RedisClient('127.0.0.1', 6379);
+        
+        $payload = json_encode([
+            'ticket_id' => (int)$newTicketId,
+            'field'     => 'new_ticket',
+            'value'     => 1,
+            'time'      => time()
+        ]);
 
-            if ($connected) {
-                $payload = json_encode([
-                    'ticket_id' => (int)$newTicketId,
-                    'field'     => 'new_ticket',
-                    'value'     => 1,
-                    'time'      => time()
-                ]);
-
-                $redis->publish('ticket_updates', $payload);
-            } else {
-                error_log("REDIS: Connection failed in create_ticket.php");
-            }
-        }
+        $redis->publish('ticket_updates', $payload);
+        
     } catch (Throwable $e) {
-        // This catches ALL errors, including those that usually crash PHP
-        error_log("REDIS EXCEPTION: " . $e->getMessage());
+        // Log error but don't stop the PHP script
+        error_log("REDIS PUSH ERROR: " . $e->getMessage());
     }
 
     echo json_encode(['success' => true, 'id' => $newTicketId]);
