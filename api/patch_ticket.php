@@ -8,6 +8,7 @@ ini_set('display_errors', 0);
 try {
     require_once __DIR__ . "/../includes/session.php";
     require_once __DIR__ . "/../includes/db.php";
+    require_once __DIR__ . "/../includes/RedisClient.php"; // ✅ Use the custom client
 
     if (empty($_SESSION['is_admin'])) {
         throw new Exception("Unauthorized access", 403);
@@ -31,25 +32,27 @@ try {
 
     if (!$id || !$updateField) throw new Exception("Invalid ID or field", 400);
 
-    // Update Database
+    // 1. Update Database
     $sql = "UPDATE tickets SET $updateField = ? WHERE id = ?";
     $stmt = $conn->prepare($sql);
     $stmt->execute([$val, $id]);
 
-    // --- REAL-TIME NOTIFICATION ---
-    // This sends the signal to your Memurai monitor
+    // 2. --- REAL-TIME NOTIFICATION ---
     try {
-        $redis = new Redis();
-        $redis->connect('127.0.0.1', 6379);
+        // ✅ Using the manual socket client to avoid "extension not found" errors
+        $redis = new RedisClient('127.0.0.1', 6379);
+        
         $payload = json_encode([
             'ticket_id' => $id,
-            'field' => $updateField,
-            'value' => $val,
-            'time' => time()
+            'field'     => $updateField,
+            'value'     => $val,
+            'time'      => time()
         ]);
+        
         $redis->publish('ticket_updates', $payload);
-    } catch (Exception $e) {
-        // Log error internally but don't stop the user response
+    } catch (Throwable $e) {
+        // Log error internally but keep the PHP response successful
+        error_log("REDIS PATCH ERROR: " . $e->getMessage());
     }
 
     if (ob_get_length()) ob_clean();
@@ -57,6 +60,8 @@ try {
 
 } catch (Throwable $e) {
     if (ob_get_length()) ob_clean();
-    http_response_code(400);
+    // Set appropriate error code
+    $code = ($e->getCode() >= 400 && $e->getCode() < 600) ? $e->getCode() : 400;
+    http_response_code($code);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
