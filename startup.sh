@@ -1,23 +1,20 @@
-#!/bin/bash
-
-# 1. Start Redis in the background
+# Start Redis
 redis-server --daemonize yes
 
-# 2. Fix Nginx config and reload
+# Copy Nginx config
 cp /home/site/wwwroot/default.txt /etc/nginx/sites-available/default
-service nginx reload
 
-# 3. Clean up and Start Node.js
-# Note: Using port 3001 internally as defined in your .mjs
+# Start Node bridge
 cd /home/site/wwwroot
-pkill node || true
-export PORT=3001 
+export PORT=3001
 nohup node socket-server.mjs > node_logs.txt 2>&1 &
 
-# 4. Set permissions so Nginx can read files
+# Fix permissions (Crucial for 502 errors)
 chown -R www-data:www-data /home/site/wwwroot
 chmod -R 755 /home/site/wwwroot
 
-# 5. Start PHP-FPM in foreground (Required to keep container alive)
-echo "🚀 Services started. Handing over to PHP-FPM..."
+# Reload Nginx to pick up the new default.txt
+service nginx reload
+
+# Start PHP-FPM
 php-fpm -F
