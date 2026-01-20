@@ -1,27 +1,38 @@
 #!/bin/bash
 
-# 1. Immediate Nginx & PHP setup (Get the site online first)
+# 1. KILL EXISTING PROCESSES (Fixes "Address already in use")
+echo "Cleaning up existing services..."
+fuser -k 9000/tcp || true   # Kill whatever is on PHP's port
+fuser -k 80/tcp || true     # Kill whatever is on Nginx port
+fuser -k 8080/tcp || true   # Kill whatever is on Azure's default port
+
+# 2. CONFIGURE NGINX
+echo "Configuring Nginx..."
 cp /home/site/wwwroot/default.txt /etc/nginx/sites-available/default
-ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
-service nginx restart
-php-fpm -D
+# Check if config is valid before restarting
+nginx -t && service nginx restart
 
-# 2. Wait for background apt locks to clear
-echo "Waiting for system locks to release..."
-while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done
-
-# 3. Enforce Node 18 & Redis Installation
+# 3. INSTALL NODE 18 & REDIS
+# Added 'NODESOURCE_NOCONFIRM' to skip the 10-second wait
+echo "Installing Node 18 and Redis..."
+export NODESOURCE_NOCONFIRM=true
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
 apt-get install -y nodejs redis-server
 
-# 4. Global tools and Redis startup
-npm install pm2 -g
+# 4. START REDIS
 redis-server --daemonize yes
 
-# 5. Application Launch
-cd /home/site/wwwroot
-npm install # Ensure socket.io and ioredis are present
-pm2 delete all || true
-pm2 start socket-server.mjs --name "socket-bridge"
+# 5. START PHP
+echo "Starting PHP..."
+# Use -D to run in background, but ensure no other FPM is running
+service php8.2-fpm stop || true
+php-fpm -D
 
-echo "🚀 Startup Complete. Node $(node -v) is running."
+# 6. START NODE SOCKET SERVER
+echo "Starting Node Server..."
+cd /home/site/wwwroot
+# Kill old node process if it exists
+pkill node || true
+nohup node socket-server.mjs > node_logs.txt 2>&1 &
+
+echo "🚀 All systems go!"
