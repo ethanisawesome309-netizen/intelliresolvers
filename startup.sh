@@ -1,24 +1,29 @@
 #!/bin/bash
 
-# 1. Start Redis
+# 1. Install Node.js (since it's missing from the image)
+echo "Installing Node.js..."
+curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs
+
+# 2. Start Redis
+echo "Starting Redis..."
 redis-server --daemonize yes
 
-# 2. Sync Nginx config
+# 3. Apply Nginx Config
+echo "Configuring Nginx..."
 cp /home/site/wwwroot/default.txt /etc/nginx/sites-available/default
+service nginx reload
 
-# 3. Start Node.js bridge
+# 4. Start Node.js Bridge
+echo "Starting Node Server..."
 cd /home/site/wwwroot
+npm install  # Ensures socket.io and redis packages exist
 export PORT=3001
 nohup node socket-server.mjs > node_logs.txt 2>&1 &
 
-# 4. Fix permissions for the Socket and Web files
-mkdir -p /var/run/php
-chown -R www-data:www-data /home/site/wwwroot /var/run/php
+# 5. Fix Permissions
+chown -R www-data:www-data /home/site/wwwroot
 chmod -R 755 /home/site/wwwroot
 
-# 5. Reload Nginx to apply default.txt changes
-service nginx reload
-
-# 6. Start PHP-FPM in foreground (Keeps the container running)
-echo "Starting PHP-FPM..."
+# 6. Start PHP-FPM in foreground
+echo "Handing over to PHP-FPM..."
 php-fpm -F
