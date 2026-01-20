@@ -1,40 +1,31 @@
+cat <<EOF > /home/site/wwwroot/default.txt
 server {
-    # Azure App Service requires listening on 8080
     listen 8080;
     listen [::]:8080;
-
-    server_name _;
     root /home/site/wwwroot;
-    index index.php index.html;
+    index index.php index.html index.htm;
+    server_name intelliresolvers.com; 
+    port_in_redirect off;
 
-    # 1. Main Site Logic
-    location / {
-        try_files $uri $uri/ /index.php?$query_string;
+    location / {            
+        try_files \$uri \$uri/ /index.php?\$query_string;
     }
 
-    # 2. Real-Time Socket Bridge (Node.js)
-    # This routes /socket.io/ requests to your PM2-managed Node process
+    # SOCKET.IO PROXY (The Missing Piece)
     location /socket.io/ {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
     }
 
-    # 3. PHP Processing (Using TCP Port 9000 for Azure compatibility)
-    location ~ \.php$ {
-        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+    location ~* [^/]\.php(/|$) {
+        fastcgi_split_path_info ^(.+?\.[Pp][Hh][Pp])(|/.*)$;
         fastcgi_pass 127.0.0.1:9000;
-        fastcgi_index index.php;
         include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-        fastcgi_param PATH_INFO $fastcgi_path_info;
-    }
-
-    # 4. Security: Block hidden files like .htaccess
-    location ~ /\.ht {
-        deny all;
+        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
     }
 }
+EOF
