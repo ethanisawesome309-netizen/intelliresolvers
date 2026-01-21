@@ -2,22 +2,26 @@ import http from "http";
 import { Server } from "socket.io";
 import { createClient } from "redis";
 
-// Use 3001 as fallback if PORT isn't passed
 const PORT = process.env.PORT || 3001; 
 
-// 1️⃣ HTTP server 
 const httpServer = http.createServer();
 
-// 2️⃣ Socket.IO attached to HTTP server
 const io = new Server(httpServer, {
-  path: "/socket.io",
+  path: "/socket.io/", // Match the trailing slash in Nginx
   cors: {
-    origin: ["https://www.intelliresolvers.com", "https://intelliresolvers.azurewebsites.net"],
+    // Add your exact domain here. If you use https://intelliresolvers.com, it must be here.
+    origin: [
+      "https://intelliresolvers.com", 
+      "https://www.intelliresolvers.com", 
+      "https://intelliresolvers.azurewebsites.net"
+    ],
+    methods: ["GET", "POST"],
     credentials: true
-  }
+  },
+  // High performance settings for Azure
+  transports: ['websocket', 'polling'] 
 });
 
-// 3️⃣ Redis subscriber
 const redis = createClient({
   socket: {
     host: "127.0.0.1",
@@ -30,7 +34,6 @@ redis.on("error", err => console.error("❌ Redis error:", err));
 await redis.connect();
 console.log("✅ Connected to Redis. Listening for ticket_updates...");
 
-// 4️⃣ Listen for PHP events via Redis
 await redis.subscribe("ticket_updates", (message) => {
   try {
     const payload = JSON.parse(message);
@@ -41,12 +44,11 @@ await redis.subscribe("ticket_updates", (message) => {
   }
 });
 
-// 5️⃣ Browser connections
 io.on("connection", (socket) => {
   console.log("👤 Browser connected:", socket.id);
   socket.on("disconnect", () => console.log("👋 Browser disconnected"));
 });
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Socket.IO bridge active on port ${PORT}`);
 });

@@ -1,24 +1,33 @@
 #!/bin/bash
 
 # --- 1. ENVIRONMENT SETUP ---
-# Removed 'set -e' to prevent the script from dying if one small command fails
 echo "Starting Startup Script at $(date)"
 
-# --- 2. DEPENDENCY INSTALLATION ---
-# Check if Node is already there to avoid redundant 'apt' locks
+# --- 2. DEPENDENCY INSTALLATION (Node 18 & Redis) ---
 if ! command -v node &> /dev/null; then
-    echo "Installing Node 18 and Redis..."
+    echo "Node.js not found. Starting installation..."
+    # Ensure curl is available
+    apt-get update && apt-get install -y curl
+    # Force NodeSource 18.x setup
     curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt-get update
     apt-get install -y nodejs redis-server --no-install-recommends
+    # Refresh the hash to find the new executable
+    hash -r 
+fi
+
+# Double check installation success
+NODE_PATH=$(which node)
+if [ -z "$NODE_PATH" ]; then
+    echo "ERROR: Node installation failed."
+else
+    echo "Node installed at: $NODE_PATH (Version: $(node -v))"
 fi
 
 # --- 3. SERVICE: REDIS ---
 echo "Starting Redis..."
-# Ensure redis-server is in the path and start it
 service redis-server start || redis-server --daemonize yes
 
-# Wait for Redis to be ready
+# Wait for Redis (max 10 seconds)
 COUNT=0
 while ! redis-cli ping | grep -q PONG && [ $COUNT -lt 5 ]; do
     echo "Waiting for Redis..."
@@ -29,20 +38,17 @@ done
 # --- 4. NGINX CONFIGURATION ---
 echo "Syncing Nginx configurations..."
 if [ -f /home/site/wwwroot/default.txt ]; then
-    # Overwrite both to be safe
     cp /home/site/wwwroot/default.txt /etc/nginx/sites-available/default
-    cp /home/site/wwwroot/default.txt /etc/nginx/sites-enabled/default
-    
-    if nginx -t; then
-        service nginx reload
-    fi
+    ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+    nginx -t && service nginx reload
 fi
 
 # --- 5. SERVICE: NODE.JS BRIDGE ---
 echo "Preparing Node.js bridge..."
 cd /home/site/wwwroot
-# Install dependencies if they are missing
-if [ ! -d "node_modules" ]; then
+
+# Ensure npm is present and install dependencies
+if [ -f "package.json" ]; then
     npm install --production
 fi
 
@@ -50,16 +56,16 @@ fi
 pkill node || true
 
 export PORT=3001
-echo "Launching Node.js..."
-# Use absolute path to node to be safe
-nohup /usr/bin/node socket-server.mjs > node_logs.txt 2>&1 &
+echo "Launching Node.js Bridge..."
+# Use the full path found earlier to ensure it runs
+nohup $NODE_PATH socket-server.mjs > node_logs.txt 2>&1 &
 
 # --- 6. PERMISSIONS ---
 echo "Finalizing permissions..."
+mkdir -p /var/run/php
 chown -R www-data:www-data /home/site/wwwroot /var/run/php
 chmod -R 755 /home/site/wwwroot
 
-# --- 7. START PHP-FPM (The Force-Bind Fix) ---
+# --- 7. START PHP-FPM ---
 echo "🚀 Starting PHP-FPM on 127.0.0.1:9000..."
-# Using -d overrides the config file settings at runtime
 exec php-fpm -d "listen=127.0.0.1:9000" -F -R
