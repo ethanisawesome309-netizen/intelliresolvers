@@ -2,40 +2,45 @@ server {
     listen 8080;
     listen [::]:8080;
     root /home/site/wwwroot;
-    index index.html index.htm index.php;
+    index index.php index.html index.htm;
     server_name intelliresolvers.com;
     port_in_redirect off;
 
+    # Fix for PHP 404s: check files first, then fallback to index.php
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files $uri $uri/ /index.php?$query_string;
     }
 
+    # SOCKET.IO REVERSE PROXY
     location /socket.io/ {
-        proxy_pass http://127.0.0.1:3001;
+        proxy_pass http://127.0.0.1:3001; 
         proxy_http_version 1.1;
         
-        # Critical headers for WebSockets
+        # Headers required for WSS (WebSocket Secure)
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         
-        # Standard Proxy Headers
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
 
-        # Disable caching for WebSockets
+        # Azure/WebSocket specific optimizations
+        proxy_buffering off;
         proxy_cache_bypass $http_upgrade;
+        proxy_read_timeout 86400;
     }
 
+    # PHP-FPM PROXY
     location ~ [^/]\.php(/|$) {
-    fastcgi_split_path_info ^(.+?\.php)(/.*)$;
-    
-    # MATCH THIS TO THE STARTUP SCRIPT
-    fastcgi_pass 127.0.0.1:9000; 
+        fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+        
+        # Ensure file exists before passing to PHP
+        try_files $uri =404;
 
-    include fastcgi_params;
-    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
-    fastcgi_param PATH_INFO $fastcgi_path_info;
+        fastcgi_pass 127.0.0.1:9000; 
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
     }
 }
