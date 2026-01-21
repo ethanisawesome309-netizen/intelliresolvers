@@ -11,9 +11,11 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-$data = json_decode(file_get_contents("php://input"), true);
-$title   = trim($data['title'] ?? '');
-$message = trim($data['message'] ?? '');
+// Since we are now sending multipart/form-data for files, 
+// we use $_POST instead of php://input
+$title   = trim($_POST['title'] ?? '');
+$message = trim($_POST['message'] ?? '');
+$filePath = null;
 
 if ($title === '' || $message === '') {
     http_response_code(400);
@@ -21,17 +23,38 @@ if ($title === '' || $message === '') {
     exit;
 }
 
+// --- FILE UPLOAD LOGIC ---
+if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+    $uploadDir = __DIR__ . "/../uploads/tickets/";
+    
+    // Create directory if it doesn't exist
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    $fileTmpPath = $_FILES['attachment']['tmp_name'];
+    $fileName = time() . '_' . basename($_FILES['attachment']['name']);
+    $destPath = $uploadDir . $fileName;
+
+    // Optional: Validate file size (e.g., 20MB) or type here
+    if (move_uploaded_file($fileTmpPath, $destPath)) {
+        // Relative path for database storage and frontend access
+        $filePath = "uploads/tickets/" . $fileName;
+    }
+}
+
 try {
-    // 1. Insert into Database
+    // 1. Insert into Database (Added file_path column)
     $stmt = $conn->prepare(
-        "INSERT INTO tickets (user_id, title, message, status_id)
-         VALUES (:uid, :title, :message, 1)"
+        "INSERT INTO tickets (user_id, title, message, status_id, file_path)
+         VALUES (:uid, :title, :message, 1, :file_path)"
     );
 
     $stmt->execute([
         'uid' => $_SESSION['user_id'],
         'title' => $title,
-        'message' => $message
+        'message' => $message,
+        'file_path' => $filePath
     ]);
 
     $newTicketId = $conn->lastInsertId();

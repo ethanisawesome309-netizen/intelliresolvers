@@ -15,7 +15,7 @@ try {
 
     $user_role = $_SESSION['role'] ?? '';
     $current_user_id = $_SESSION['user_id'] ?? 0;
-    $current_user_email = $_SESSION['email'] ?? ''; // Added email fetch
+    $current_user_email = $_SESSION['email'] ?? ''; 
     
     $role_map = [
         'Junior'       => 1,
@@ -41,6 +41,7 @@ try {
             t.id, 
             t.title, 
             t.message, 
+            t.file_path, -- ✅ Added file_path to the selection
             t.status_id, 
             t.priority_id, 
             t.assigned_to,
@@ -71,7 +72,7 @@ try {
         "tickets" => $tickets, 
         "tier" => $user_role,
         "current_user_id" => $current_user_id,
-        "user_email" => $current_user_email // Added for React logic
+        "user_email" => $current_user_email 
     ]);
 
 } catch (Throwable $e) {
