@@ -30,12 +30,11 @@ server {
         proxy_read_timeout 86400;
     }
 
-    location ~ [^/]\.php(/|$) {
-        fastcgi_split_path_info ^(.+?\.php)(/.*)$;
-        
-        # FIX: Ensure a real 404 is thrown if the .php file is actually missing
+    location ~ \.php$ {
+        # FIX: Ensure we catch .php files in subdirectories like /api/
         try_files $uri =404;
 
+        fastcgi_split_path_info ^(.+?\.php)(/.*)$;
         fastcgi_pass 127.0.0.1:9000; 
 
         include fastcgi_params;
