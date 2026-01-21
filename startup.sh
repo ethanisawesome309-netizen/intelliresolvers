@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --- 1. ENVIRONMENT SETUP ---
-echo "Starting Startup Script..."
+echo "Starting Startup Script at $(date)"
 
 # --- 2. DEPENDENCIES ---
 if ! command -v node &> /dev/null; then
@@ -11,7 +11,7 @@ if ! command -v node &> /dev/null; then
     hash -r 
 fi
 
-# --- 3. SERVICES ---
+# --- 3. SERVICE: REDIS ---
 service redis-server start || redis-server --daemonize yes
 
 # --- 4. PREPARE APP ---
@@ -22,15 +22,16 @@ if [ ! -d "node_modules" ]; then
 fi
 
 pkill -f socket-server.mjs || true
+export PORT=3001 
 nohup $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
 
 # --- 5. DIRECTORY & PERMISSIONS SETUP ---
-echo "Creating folders and setting permissions..."
+echo "Finalizing folders and permissions..."
 mkdir -p /home/site/wwwroot/uploads/tickets
 mkdir -p /var/run/php
 mkdir -p /var/log/php-fpm
 
-# Apply ownership to the user PHP-FPM runs as
+# ✅ FIX: Apply recursive permissions so PHP can "see" into subfolders
 chown -R www-data:www-data /home/site/wwwroot /var/run/php /var/log/php-fpm
 chmod -R 755 /home/site/wwwroot
 chmod -R 777 /home/site/wwwroot/uploads
@@ -47,9 +48,7 @@ fi
 
 # --- 7. START PHP ---
 echo "🚀 Starting PHP-FPM..."
-# Kill any existing PHP processes to prevent port conflicts
-pkill -o php-fpm || true
 pkill -f php-fpm || true
 
-# Start PHP-FPM on port 9000 to match Nginx config
+# ✅ FIX: Force PHP-FPM to listen on 127.0.0.1:9000 specifically
 php-fpm -F -R -d "listen=127.0.0.1:9000"
