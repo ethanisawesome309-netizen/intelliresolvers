@@ -1,26 +1,27 @@
 <?php
-// /home/site/wwwroot/api/get_ticket_history.php
+// Enable error reporting to see the crash in the browser
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 require __DIR__ . "/../includes/session.php";
 require __DIR__ . "/../includes/db.php";
 
 header("Content-Type: application/json");
 
-// Ensure only logged in users can see history
-if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
-    exit;
-}
-
 $ticketId = $_GET['ticket_id'] ?? null;
 
 if (!$ticketId) {
-    http_response_code(400);
     echo json_encode(['success' => false, 'error' => 'Missing ticket ID']);
     exit;
 }
 
 try {
+    // Check if $conn actually exists from db.php
+    if (!isset($conn)) {
+        throw new Exception("Database connection variable not found.");
+    }
+
     $stmt = $conn->prepare("
         SELECT 
             a.id,
@@ -39,6 +40,6 @@ try {
 
     echo json_encode(['success' => true, 'data' => $history]);
 } catch (Exception $e) {
-    http_response_code(500);
+    // This will now return the EXACT SQL or PHP error to your console
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
