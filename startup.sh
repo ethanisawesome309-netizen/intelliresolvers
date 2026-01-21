@@ -73,12 +73,15 @@ echo "Launching Node.js Bridge..."
 # Use the ABSOLUTE path here
 nohup $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
 
-# --- 6. PERMISSIONS ---
+# --- 6. PERMISSIONS (Crucial for 404 fixes) ---
 echo "Finalizing permissions..."
 mkdir -p /var/run/php
-chown -R www-data:www-data /home/site/wwwroot /var/run/php
+# Ensure the www-data user can read the web files
+chown -R www-data:www-data /home/site/wwwroot
 chmod -R 755 /home/site/wwwroot
 
 # --- 7. START PHP-FPM ---
-echo "🚀 Starting PHP-FPM on 127.0.0.1:9000..."
-exec php-fpm -d "listen=127.0.0.1:9000" -F -R
+echo "🚀 Starting PHP-FPM..."
+# We remove the forced 127.0.0.1 bind IF you want to use the default config, 
+# BUT if you keep it, Nginx MUST match it.
+exec php-fpm -F -R -d "listen=127.0.0.1:9000"
