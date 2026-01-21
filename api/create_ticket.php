@@ -1,6 +1,5 @@
 <?php
-// api/create_ticket.php
-ob_start(); // Buffer output to prevent headers already sent errors
+ob_start(); // ✅ Prevent accidental whitespace/error output before JSON
 header("Content-Type: application/json");
 
 try {
@@ -9,7 +8,9 @@ try {
     require __DIR__ . "/../includes/RedisClient.php";
 
     if (!isset($_SESSION['user_id'])) {
-        throw new Exception('Not authenticated', 401);
+        http_response_code(401);
+        echo json_encode(['error' => 'Not authenticated']);
+        exit;
     }
 
     $title   = trim($_POST['title'] ?? '');
@@ -17,16 +18,17 @@ try {
     $filePath = null;
 
     if ($title === '' || $message === '') {
-        throw new Exception('Missing fields', 400);
+        http_response_code(400);
+        echo json_encode(['error' => 'Missing fields']);
+        exit;
     }
 
     // --- FILE UPLOAD LOGIC ---
     if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
         $uploadDir = __DIR__ . "/../uploads/tickets/";
+        
         if (!is_dir($uploadDir)) {
-            if (!mkdir($uploadDir, 0777, true)) {
-                throw new Exception("Failed to create upload directory");
-            }
+            mkdir($uploadDir, 0777, true);
         }
 
         $fileTmpPath = $_FILES['attachment']['tmp_name'];
@@ -36,11 +38,10 @@ try {
         if (move_uploaded_file($fileTmpPath, $destPath)) {
             $filePath = "uploads/tickets/" . $fileName;
         } else {
-            throw new Exception("Failed to move uploaded file");
+            throw new Exception("Failed to save uploaded file.");
         }
     }
 
-    // 1. Insert into Database
     $stmt = $conn->prepare(
         "INSERT INTO tickets (user_id, title, message, status_id, file_path)
          VALUES (:uid, :title, :message, 1, :file_path)"
@@ -55,7 +56,7 @@ try {
 
     $newTicketId = $conn->lastInsertId();
 
-    // 2. REAL-TIME NOTIFICATION
+    // --- REAL-TIME NOTIFICATION ---
     try {
         $redis = new RedisClient('127.0.0.1', 6379);
         $payload = json_encode([
@@ -66,15 +67,14 @@ try {
         ]);
         $redis->publish('ticket_updates', $payload);
     } catch (Throwable $e) {
-        error_log("REDIS PUSH ERROR: " . $e->getMessage());
+        error_log("REDIS ERROR: " . $e->getMessage());
     }
 
-    if (ob_get_length()) ob_clean();
+    ob_end_clean(); // Clear buffer
     echo json_encode(['success' => true, 'id' => $newTicketId]);
 
 } catch (Exception $e) {
-    if (ob_get_length()) ob_clean();
-    $code = $e->getCode() ?: 500;
-    http_response_code(is_numeric($code) && $code >= 400 ? $code : 500);
+    ob_end_clean(); // Clear buffer
+    http_response_code(500);
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
