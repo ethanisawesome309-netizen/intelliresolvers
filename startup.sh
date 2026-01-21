@@ -76,12 +76,21 @@ export PORT=3001
 echo "Launching Node.js Bridge on PORT 3001..."
 nohup $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
 
-# --- 6. PERMISSIONS ---
+# --- 6. PERMISSIONS & DIRECTORIES ---
 echo "Finalizing permissions..."
+# PHP-FPM NEEDS this directory to start, even if using 127.0.0.1
 mkdir -p /var/run/php
-chown -R www-data:www-data /home/site/wwwroot /var/run/php
+mkdir -p /var/log/php-fpm
+chown -R www-data:www-data /home/site/wwwroot /var/run/php /var/log/php-fpm
 chmod -R 755 /home/site/wwwroot
 
 # --- 7. START PHP-FPM ---
 echo "🚀 Starting PHP-FPM..."
-exec php-fpm -F -R -d "listen=127.0.0.1:9000"
+mkdir -p /var/run/php
+
+# Kill any ghost processes
+pkill -f php-fpm || true
+
+# Start PHP-FPM in the foreground as the final command 
+# This keeps the Azure container alive.
+php-fpm -F -R -d "listen=127.0.0.1:9000"
