@@ -10,21 +10,28 @@ server {
         try_files $uri $uri/ /index.php?$query_string;
     }
 
-    # PROXY TO NODE.JS (socket-server.mjs)
     location /socket.io/ {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
+        
+        # Critical headers for WebSockets
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
+        
+        # Standard Proxy Headers
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Disable caching for WebSockets
         proxy_cache_bypass $http_upgrade;
     }
 
-    # PHP-FPM VIA UNIX SOCKET
     location ~ [^/]\.php(/|$) {
         fastcgi_split_path_info ^(.+?\.php)(/.*)$;
-        # Check this path! Azure 8.2 often uses php8.2-fpm.sock
-        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        # Change this line to the IP/Port found in your grep
+        fastcgi_pass [::1]:9000;
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         fastcgi_param PATH_INFO $fastcgi_path_info;
