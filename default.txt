@@ -1,20 +1,16 @@
 server {
     listen 8080;
     listen [::]:8080;
-    
-    # ✅ FIX: Use absolute path and ensure index.html is prioritized
     root /home/site/wwwroot;
     index index.html index.php index.htm;
-    
     server_name intelliresolvers.com;
     port_in_redirect off;
 
-    # Prevents 404/413 errors on file uploads
     client_max_body_size 20M;
 
     location / {
-        # ✅ FIX: Ensures React Router and PHP work together
-        try_files $uri $uri/ /index.html /index.php?$query_string;
+        # Try local files first, fallback to index.html for React routing
+        try_files $uri $uri/ /index.html;
     }
 
     location /socket.io/ {
@@ -23,22 +19,18 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_buffering off;
         proxy_read_timeout 86400;
     }
 
     location ~ \.php$ {
-        # This prevents Nginx from trying to serve a non-existent PHP file
+        # ✅ CRITICAL: Do not fallback to index.html if PHP fails
+        # This prevents the "Unexpected token <" error in the browser
         try_files $uri =404;
 
         fastcgi_split_path_info ^(.+?\.php)(/.*)$;
         fastcgi_pass 127.0.0.1:9000;
         include fastcgi_params;
-        
-        # ✅ FIX: Use realpath_root to resolve Azure's symlinks correctly
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         fastcgi_param DOCUMENT_ROOT $realpath_root;
         fastcgi_param PATH_INFO $fastcgi_path_info;
