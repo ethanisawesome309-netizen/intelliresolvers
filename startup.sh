@@ -47,18 +47,31 @@ fi
 echo "Preparing Node.js bridge..."
 cd /home/site/wwwroot
 
-# Ensure npm is present and install dependencies
-if [ -f "package.json" ]; then
-    npm install --production
+# Ensure the system looks in common Node installation folders
+export PATH=$PATH:/usr/bin:/usr/local/bin
+
+# Find the absolute path to node
+NODE_EXE=$(which node)
+
+if [ -z "$NODE_EXE" ]; then
+    echo "Node not found in PATH, trying manual install..."
+    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+    apt-get install -y nodejs
+    NODE_EXE="/usr/bin/node"
 fi
 
-# Kill old ghost processes
-pkill node || true
+echo "Using Node from: $NODE_EXE"
 
-export PORT=3001
+# Install dependencies if node_modules is missing
+if [ ! -d "node_modules" ]; then
+    $NODE_EXE /usr/bin/npm install --production
+fi
+
+pkill -f socket-server.mjs || true
+
 echo "Launching Node.js Bridge..."
-# Use the full path found earlier to ensure it runs
-nohup $NODE_PATH socket-server.mjs > node_logs.txt 2>&1 &
+# Use the ABSOLUTE path here
+nohup $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
 
 # --- 6. PERMISSIONS ---
 echo "Finalizing permissions..."
