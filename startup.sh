@@ -34,7 +34,7 @@ done
 echo "Syncing Nginx configurations..."
 if [ -f /home/site/wwwroot/default.txt ]; then
     cp /home/site/wwwroot/default.txt /etc/nginx/sites-available/default
-    # We move the reload to the end of the script to ensure 404s don't occur during permission sync
+    # Reload moved to section 6 to ensure permissions are applied first
 fi
 
 # --- 5. SERVICE: NODE.JS BRIDGE ---
@@ -59,17 +59,16 @@ nohup $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
 
 # --- 6. PERMISSIONS & DIRECTORIES ---
 echo "Finalizing permissions..."
-# ✅ ADDED: Ensure the uploads folder exists for the new feature
+# ✅ FIXED: Ensure upload directory exists before starting PHP/Nginx
 mkdir -p /home/site/wwwroot/uploads/tickets
-
 mkdir -p /var/run/php
 mkdir -p /var/log/php-fpm
 
-# Ensure permissions are correct BEFORE Nginx reloads
+# Ensure permissions are correct BEFORE Nginx reloads to prevent 404 cache
 chown -R www-data:www-data /home/site/wwwroot /var/run/php /var/log/php-fpm
 chmod -R 755 /home/site/wwwroot
 
-# ✅ ADDED: Reload Nginx now that permissions are set
+# ✅ FIXED: Reload Nginx only after permissions are 100% set
 if nginx -t; then
     service nginx reload
 fi
@@ -77,4 +76,6 @@ fi
 # --- 7. START PHP-FPM ---
 echo "🚀 Starting PHP-FPM..."
 pkill -f php-fpm || true
+
+# Start PHP-FPM in the foreground
 php-fpm -F -R -d "listen=127.0.0.1:9000"
