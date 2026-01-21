@@ -55,12 +55,11 @@ echo "Launching Node.js..."
 nohup /usr/bin/node socket-server.mjs > node_logs.txt 2>&1 &
 
 # --- 6. PERMISSIONS ---
-echo "Setting permissions..."
-# In your image, PHP-FPM uses port 9000, but we create the dir just in case
-mkdir -p /var/run/php
+echo "Finalizing permissions..."
 chown -R www-data:www-data /home/site/wwwroot /var/run/php
+chmod -R 755 /home/site/wwwroot
 
-# --- 7. FINAL HANDOFF: PHP-FPM ---
-echo "🚀 Starting PHP-FPM..."
-# IMPORTANT: Added -F to keep container alive and -R to allow root start if needed
-exec php-fpm -F -R
+# --- 7. START PHP-FPM (The Force-Bind Fix) ---
+echo "🚀 Starting PHP-FPM on 127.0.0.1:9000..."
+# Using -d overrides the config file settings at runtime
+exec php-fpm -d "listen=127.0.0.1:9000" -F -R
