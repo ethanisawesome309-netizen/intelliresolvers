@@ -9,7 +9,6 @@ server {
     client_max_body_size 20M;
 
     location / {
-        # ✅ CHANGE: Fallback to index.html ONLY for non-PHP requests
         try_files $uri $uri/ /index.html;
     }
 
@@ -20,20 +19,23 @@ server {
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
         proxy_buffering off;
-        proxy_read_timeout 86400;
     }
 
     location ~ \.php$ {
-        # ✅ CHANGE: If PHP fails, return 404 immediately. 
-        # Do NOT go to index.html (this prevents the full site 404).
+        # Check if the physical file exists before passing to PHP
         try_files $uri =404;
 
         fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+        
+        # This must match the port in your startup.sh
         fastcgi_pass 127.0.0.1:9000;
+        
         include fastcgi_params;
+        
+        # ✅ THE FIX: Use realpath_root to ensure PHP finds the file
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         fastcgi_param DOCUMENT_ROOT $realpath_root;
-        fastcgi_param PATH_INFO $fastcgi_path_info;
+        
         fastcgi_read_timeout 300;
     }
 }

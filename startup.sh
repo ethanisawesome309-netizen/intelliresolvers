@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # --- 1. ENVIRONMENT SETUP ---
-echo "Starting Startup Script at $(date)"
+echo "Starting Startup Script..."
 
-# --- 2. DEPENDENCY INSTALLATION ---
+# --- 2. DEPENDENCIES ---
 if ! command -v node &> /dev/null; then
     apt-get update && apt-get install -y curl
     curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
@@ -11,7 +11,7 @@ if ! command -v node &> /dev/null; then
     hash -r 
 fi
 
-# --- 3. SERVICE: REDIS ---
+# --- 3. SERVICES ---
 service redis-server start || redis-server --daemonize yes
 
 # --- 4. PREPARE APP ---
@@ -22,19 +22,17 @@ if [ ! -d "node_modules" ]; then
 fi
 
 pkill -f socket-server.mjs || true
-export PORT=3001 
 nohup $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
 
-# --- 5. PERMISSIONS & DIRECTORY SETUP ---
-echo "Fixing permissions..."
+# --- 5. DIRECTORY & PERMISSIONS SETUP ---
+echo "Creating folders and setting permissions..."
 mkdir -p /home/site/wwwroot/uploads/tickets
 mkdir -p /var/run/php
 mkdir -p /var/log/php-fpm
 
-# Apply ownership
+# Apply ownership to the user PHP-FPM runs as
 chown -R www-data:www-data /home/site/wwwroot /var/run/php /var/log/php-fpm
 chmod -R 755 /home/site/wwwroot
-# ✅ CHANGE: Ensure uploads folder is always writable to prevent PHP 500/404 errors
 chmod -R 777 /home/site/wwwroot/uploads
 
 # --- 6. NGINX SYNC ---
@@ -49,5 +47,9 @@ fi
 
 # --- 7. START PHP ---
 echo "🚀 Starting PHP-FPM..."
+# Kill any existing PHP processes to prevent port conflicts
+pkill -o php-fpm || true
 pkill -f php-fpm || true
+
+# Start PHP-FPM on port 9000 to match Nginx config
 php-fpm -F -R -d "listen=127.0.0.1:9000"
