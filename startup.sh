@@ -24,21 +24,21 @@ fi
 pkill -f socket-server.mjs || true
 nohup $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
 
-# --- 5. THE 404 FIX: PERMISSIONS & DIRECTORY SETUP ---
-echo "Configuring directories and permissions..."
+# --- 5. PERMISSIONS & DIRECTORY SETUP ---
+echo "Fixing permissions and folders..."
 mkdir -p /home/site/wwwroot/uploads/tickets
 mkdir -p /var/run/php
 mkdir -p /var/log/php-fpm
 
-# Apply ownership to the entire web root
-chown -R www-data:www-data /home/site/wwwroot
+# Apply ownership
+chown -R www-data:www-data /home/site/wwwroot /var/run/php /var/log/php-fpm
 chmod -R 755 /home/site/wwwroot
 
-# --- 6. NGINX SYNC (Must happen AFTER permissions) ---
+# --- 6. NGINX SYNC (The 404 Killer) ---
 if [ -f /home/site/wwwroot/default.txt ]; then
     cp /home/site/wwwroot/default.txt /etc/nginx/sites-available/default
-    # Check config and restart
-    nginx -t && service nginx restart
+    # ✅ FORCE RESTART: Reload doesn't always clear 404 errors in Azure
+    service nginx restart
 fi
 
 # --- 7. START PHP ---
