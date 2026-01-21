@@ -81,8 +81,11 @@ echo "Finalizing permissions..."
 # PHP-FPM NEEDS this directory to start, even if using 127.0.0.1
 mkdir -p /var/run/php
 mkdir -p /var/log/php-fpm
-chown -R www-data:www-data /home/site/wwwroot /var/run/php /var/log/php-fpm
+# Create and secure the uploads folder
+mkdir -p /home/site/wwwroot/uploads
+chown -R www-data:www-data /home/site/wwwroot /var/run/php /var/log/php-fpm /home/site/wwwroot/uploads
 chmod -R 755 /home/site/wwwroot
+chmod -R 775 /home/site/wwwroot/uploads
 
 # --- 7. START PHP-FPM ---
 echo "🚀 Starting PHP-FPM..."

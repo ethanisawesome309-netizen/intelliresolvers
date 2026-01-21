@@ -2,12 +2,14 @@ server {
     listen 8080;
     listen [::]:8080;
     root /home/site/wwwroot;
-    index index.php index.html index.htm; # Put index.php first
+    index index.php index.html index.htm;
     server_name intelliresolvers.com;
     port_in_redirect off;
 
+    # Allow large file uploads for ticket attachments
+    client_max_body_size 20M;
+
     location / {
-        # FIX: Try the PHP index if the file isn't found, not just html
         try_files $uri $uri/ /index.php?$query_string;
     }
 
@@ -25,24 +27,22 @@ server {
 
         proxy_cache_bypass $http_upgrade;
         
-        # FIX: Azure requires buffering off for WebSockets to stay alive
         proxy_buffering off;
         proxy_read_timeout 86400;
     }
 
     location ~ \.php$ {
-        # This is the "magic" line for subdirectory 404s
         try_files $uri =404;
 
         fastcgi_split_path_info ^(.+?\.php)(/.*)$;
         fastcgi_pass 127.0.0.1:9000;
         include fastcgi_params;
         
-        # Absolute path mapping
-        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        # Absolute path mapping using realpath to avoid symlink issues
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
         fastcgi_param PATH_INFO $fastcgi_path_info;
         
-        # Increase timeouts for long-running API calls
         fastcgi_read_timeout 300;
     }
 }
