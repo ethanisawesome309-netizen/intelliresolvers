@@ -6,28 +6,19 @@ echo "Starting Startup Script at $(date)"
 # --- 2. DEPENDENCY INSTALLATION (Node 18 & Redis) ---
 if ! command -v node &> /dev/null; then
     echo "Node.js not found. Starting installation..."
-    # Ensure curl is available
     apt-get update && apt-get install -y curl
-    # Force NodeSource 18.x setup
     curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
     apt-get install -y nodejs redis-server --no-install-recommends
-    # Refresh the hash to find the new executable
     hash -r 
 fi
 
-# Double check installation success
 NODE_PATH=$(which node)
-if [ -z "$NODE_PATH" ]; then
-    echo "ERROR: Node installation failed."
-else
-    echo "Node installed at: $NODE_PATH (Version: $(node -v))"
-fi
+echo "Node installed at: $NODE_PATH (Version: $(node -v))"
 
 # --- 3. SERVICE: REDIS ---
 echo "Starting Redis..."
 service redis-server start || redis-server --daemonize yes
 
-# Wait for Redis (max 10 seconds)
 COUNT=0
 while ! redis-cli ping | grep -q PONG && [ $COUNT -lt 5 ]; do
     echo "Waiting for Redis..."
@@ -47,41 +38,30 @@ fi
 echo "Preparing Node.js bridge..."
 cd /home/site/wwwroot
 
-# Ensure the system looks in common Node installation folders
+# Ensure we have the correct path for npm
 export PATH=$PATH:/usr/bin:/usr/local/bin
-
-# Find the absolute path to node
 NODE_EXE=$(which node)
 
-if [ -z "$NODE_EXE" ]; then
-    echo "Node not found in PATH, trying manual install..."
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt-get install -y nodejs
-    NODE_EXE="/usr/bin/node"
-fi
-
-echo "Using Node from: $NODE_EXE"
-
-# Install dependencies if node_modules is missing
-if [ ! -d "node_modules" ]; then
-    $NODE_EXE /usr/bin/npm install --production
-fi
-
+# Clean up any previous failed runs
 pkill -f socket-server.mjs || true
 
-echo "Launching Node.js Bridge..."
-# Use the ABSOLUTE path here
+# Re-install modules if missing
+if [ ! -d "node_modules" ]; then
+    echo "node_modules not found, installing..."
+    npm install --production
+fi
+
+echo "Launching Node.js Bridge on Port 3001..."
+# Redirect both stdout and stderr to the log file
 nohup $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
 
-# --- 6. PERMISSIONS (Crucial for 404 fixes) ---
+# --- 6. PERMISSIONS ---
 echo "Finalizing permissions..."
 mkdir -p /var/run/php
-# Ensure the www-data user can read the web files
-chown -R www-data:www-data /home/site/wwwroot
+chown -R www-data:www-data /home/site/wwwroot /var/run/php
 chmod -R 755 /home/site/wwwroot
 
 # --- 7. START PHP-FPM ---
 echo "🚀 Starting PHP-FPM..."
-# We remove the forced 127.0.0.1 bind IF you want to use the default config, 
-# BUT if you keep it, Nginx MUST match it.
+# Using exec to replace the shell as the primary container process
 exec php-fpm -F -R -d "listen=127.0.0.1:9000"

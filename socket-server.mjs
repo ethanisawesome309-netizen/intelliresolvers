@@ -2,14 +2,14 @@ import http from "http";
 import { Server } from "socket.io";
 import { createClient } from "redis";
 
-const PORT = process.env.PORT || 3001; 
+// FORCE port 3001 to avoid conflict with Nginx (8080)
+const PORT = 3001; 
 
 const httpServer = http.createServer();
 
 const io = new Server(httpServer, {
-  path: "/socket.io/", // Match the trailing slash in Nginx
+  path: "/socket.io/", 
   cors: {
-    // Add your exact domain here. If you use https://intelliresolvers.com, it must be here.
     origin: [
       "https://intelliresolvers.com", 
       "https://www.intelliresolvers.com", 
@@ -18,7 +18,6 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  // High performance settings for Azure
   transports: ['websocket', 'polling'] 
 });
 
@@ -31,6 +30,7 @@ const redis = createClient({
 
 redis.on("error", err => console.error("❌ Redis error:", err));
 
+// Connect to Redis before subscribing
 await redis.connect();
 console.log("✅ Connected to Redis. Listening for ticket_updates...");
 
@@ -49,6 +49,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => console.log("👋 Browser disconnected"));
 });
 
+// Explicitly bind to 0.0.0.0
 httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Socket.IO bridge active on port ${PORT}`);
 });
