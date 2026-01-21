@@ -9,7 +9,7 @@ server {
     client_max_body_size 20M;
 
     location / {
-        # Try local files first, fallback to index.html for React routing
+        # ✅ CHANGE: Fallback to index.html ONLY for non-PHP requests
         try_files $uri $uri/ /index.html;
     }
 
@@ -24,8 +24,8 @@ server {
     }
 
     location ~ \.php$ {
-        # ✅ CRITICAL: Do not fallback to index.html if PHP fails
-        # This prevents the "Unexpected token <" error in the browser
+        # ✅ CHANGE: If PHP fails, return 404 immediately. 
+        # Do NOT go to index.html (this prevents the full site 404).
         try_files $uri =404;
 
         fastcgi_split_path_info ^(.+?\.php)(/.*)$;

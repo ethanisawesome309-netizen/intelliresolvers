@@ -31,12 +31,13 @@ mkdir -p /home/site/wwwroot/uploads/tickets
 mkdir -p /var/run/php
 mkdir -p /var/log/php-fpm
 
-# Apply ownership and sticky permissions for uploads
-chown -R www-data:www-data /home/site/wwwroot
+# Apply ownership
+chown -R www-data:www-data /home/site/wwwroot /var/run/php /var/log/php-fpm
 chmod -R 755 /home/site/wwwroot
-chmod -R 777 /home/site/wwwroot/uploads # Ensure PHP can write here regardless of process owner
+# ✅ CHANGE: Ensure uploads folder is always writable to prevent PHP 500/404 errors
+chmod -R 777 /home/site/wwwroot/uploads
 
-# --- 6. NGINX SYNC (The 404 Killer) ---
+# --- 6. NGINX SYNC ---
 rm -rf /etc/nginx/sites-enabled/*
 rm -rf /etc/nginx/sites-available/default
 
