@@ -29,7 +29,7 @@ try {
             a.old_value,
             a.new_value,
             a.changed_at,
-            u.username as changed_by
+            u.email as changed_by
         FROM ticket_audit_log a 
         JOIN users u ON a.user_id = u.id 
         WHERE a.ticket_id = ? 
