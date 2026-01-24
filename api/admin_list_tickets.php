@@ -16,6 +16,7 @@ try {
     $user_role = $_SESSION['role'] ?? '';
     $current_user_id = $_SESSION['user_id'] ?? 0;
     $current_user_email = $_SESSION['email'] ?? ''; 
+    $search = $_GET['search'] ?? ''; 
     
     $role_map = [
         'Junior'       => 1,
@@ -23,30 +24,37 @@ try {
         'Senior'       => 3
     ];
 
-    $where_clause = "";
+    $conditions = [];
     $params = [];
 
+    // --- EXISTING ROLE FILTER ---
     if (isset($role_map[$user_role])) {
-        $where_clause = " 
-            WHERE (t.priority_id <= ? AND t.assigned_to IS NULL AND t.claimed_by IS NULL) 
-            OR (t.assigned_to = ? OR t.claimed_by = ?) 
-        ";
+        $conditions[] = "( (t.priority_id <= ? AND t.assigned_to IS NULL AND t.claimed_by IS NULL) OR (t.assigned_to = ? OR t.claimed_by = ?) )";
         $params[] = $role_map[$user_role];
         $params[] = $current_user_id;
         $params[] = $current_user_id;
     }
 
+    // --- FULL-TEXT MATCH AGAINST SEARCH ---
+    if (!empty($search)) {
+        // We use BOOLEAN MODE with a wildcard * for better partial matching
+        // We also wrap it in + for mandatory inclusion if multiple words are used
+        $searchTerms = "";
+        $words = explode(" ", trim($search));
+        foreach($words as $w) {
+            if(!empty($w)) $searchTerms .= "+" . $w . "* ";
+        }
+        
+        $conditions[] = "MATCH(t.title, t.message) AGAINST(? IN BOOLEAN MODE)";
+        $params[] = trim($searchTerms);
+    }
+
+    $where_clause = !empty($conditions) ? "WHERE " . implode(" AND ", $conditions) : "";
+
     $query = "
         SELECT 
-            t.id, 
-            t.title, 
-            t.message, 
-            t.file_path, -- ✅ Added file_path to the selection
-            t.status_id, 
-            t.priority_id, 
-            t.assigned_to,
-            t.claimed_by,
-            u_creator.email, 
+            t.id, t.title, t.message, t.file_path, t.status_id, t.priority_id, 
+            t.assigned_to, t.claimed_by, u_creator.email, 
             COALESCE(s.label, 'Open') as status,
             COALESCE(p.label, 'Low') as priority_label, 
             COALESCE(p.color_code, '#333333') as priority_color,
