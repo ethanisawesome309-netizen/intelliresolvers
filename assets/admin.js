@@ -1,87 +1,42 @@
-import{r as a,j as e,a as p}from"./client.js";function f(){const[n,c]=a.useState([]),[o,s]=a.useState("");a.useEffect(()=>{i()},[]);async function i(){try{const t=await fetch("../api/admin_list_tickets.php",{credentials:"same-origin"});if(!t.ok)throw new Error;const r=await t.json();c(r),s("")}catch{s("Could not load tickets.")}}async function l(t,r){await fetch("../api/update_ticket_status.php",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({id:t,status:r})}),i()}async function m(t){confirm("Delete this ticket permanently?")&&(await fetch("../api/delete_ticket.php",{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify({id:t})}),i())}return e.jsxs(e.Fragment,{children:[e.jsx("style",{children:`
-        * {
-          box-sizing: border-box;
-          margin: 0;
-          padding: 0;
-          font-family: 'Kumbh Sans', sans-serif;
-        }
-
-        body {
-          background: #141414;
-          color: #fff;
-        }
-
-        .page {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 4rem 1rem;
-        }
-
-        h1 {
-          text-align: center;
-          font-size: 2.5rem;
-          margin-bottom: 3rem;
-          background: linear-gradient(to top, #ff0844, #ffb199);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-
-        h2 {
-          margin-bottom: 1.2rem;
-          font-size: 1.4rem;
-        }
-
-        .card {
-          background: #1f1f1f;
-          border-radius: 8px;
-          padding: 2rem;
-          margin-bottom: 2.5rem;
-        }
-
-        .ticket {
-          background: #141414;
-          border-radius: 6px;
-          padding: 1.2rem;
-          margin-bottom: 1rem;
-        }
-
-        .ticket-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 0.4rem;
-        }
-
-        .ticket-title {
-          font-weight: 600;
-          background: linear-gradient(to top, #f77062, #fe5196);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-
-        .status {
-          font-size: 0.75rem;
-          padding: 4px 10px;
-          border-radius: 999px;
-          background: #1f1f1f;
-          color: #f77062;
-        }
-
-        select, button {
-          background: #141414;
-          border: 1px solid #2a2a2a;
-          color: #fff;
-          padding: 6px 10px;
-          border-radius: 6px;
-        }
-
-        .danger {
-          color: #ff4d4d;
-          cursor: pointer;
-        }
-
-        .error {
-          color: #ff4d4d;
-          margin-bottom: 1rem;
-        }
-      `}),e.jsxs("div",{className:"page",children:[e.jsx("h1",{children:"Admin Support Dashboard"}),e.jsxs("div",{className:"card",children:[e.jsx("h2",{children:"All Tickets"}),o&&e.jsx("div",{className:"error",children:o}),n.length===0?e.jsx("div",{className:"empty",children:"No tickets found."}):n.map(t=>e.jsxs("div",{className:"ticket",children:[e.jsxs("div",{className:"ticket-header",children:[e.jsxs("div",{className:"ticket-title",children:["#",t.id," — ",t.title]}),e.jsxs("select",{value:t.status,onChange:r=>l(t.id,r.target.value),children:[e.jsx("option",{children:"Open"}),e.jsx("option",{children:"In Progress"}),e.jsx("option",{children:"Closed"})]})]}),e.jsxs("div",{style:{marginBottom:"0.6rem",color:"#aaa"},children:["User: ",t.email]}),e.jsx("div",{children:t.message}),e.jsx("button",{className:"danger",style:{marginTop:"1rem"},onClick:()=>m(t.id),children:"Delete Ticket"})]},t.id))]})]})]})}const d=document.getElementById("root");d&&p(d).render(e.jsx(f,{}));
+import{r as i,l as q,j as t,c as ee}from"./index2.js";function te(){const[l,b]=i.useState([]),[m,T]=i.useState([]),[C,y]=i.useState(""),[d,$]=i.useState(""),[g,F]=i.useState(null),[A,R]=i.useState(""),[D,I]=i.useState(null),[B,E]=i.useState(!1),[j,z]=i.useState([]),[M,v]=i.useState(!1),[W,K]=i.useState(""),[k,H]=i.useState(""),[f,V]=i.useState(""),[_,U]=i.useState("all"),[w,O]=i.useState("id_desc"),N=i.useRef("");i.useEffect(()=>{N.current=f},[f]);const L=(e,r)=>{if(r===null||r===""||r==="0")return"None";const a={status_id:{1:"Open",2:"In Progress",3:"Closed"},priority_id:{1:"Low",2:"Medium",3:"High",4:"Urgent"}};if(a[e]&&a[e][r])return a[e][r];if(e==="assigned_to"||e==="claimed_by"){const n=(Array.isArray(m)?m:[]).find(o=>o&&parseInt(o.id)===parseInt(r));return n?n.name:`User ${r}`}return r};i.useEffect(()=>{const e=setTimeout(()=>{V(k)},300);return()=>clearTimeout(e)},[k]),i.useEffect(()=>{S(f)},[f]),i.useEffect(()=>{const e=q({path:"/socket.io/",transports:["websocket","polling"],reconnectionAttempts:5});return Z(),e.on("connect",()=>{console.log("✅ Connected to WebSocket Server")}),e.on("refresh_tickets",r=>{r?.ticket_id&&(I(r.ticket_id),setTimeout(()=>I(null),3e3)),S(N.current)}),()=>{e.disconnect(),e.off("refresh_tickets")}},[]);async function p(e,r={}){const a=await fetch(e,{credentials:"include",...r}),s=await a.text();if(!s||s.trim().startsWith("<!DOCTYPE")||s.trim().startsWith("<html"))throw new Error("Server returned HTML (likely Nginx/PHP error).");try{return{res:a,data:JSON.parse(s)}}catch{throw new Error("Invalid server response.")}}async function Y(e){K(e?.title??"Ticket"),z([]);try{const{data:r}=await p(`/api/get_ticket_history.php?ticket_id=${e.id}`);r.success?(z(r.data??[]),v(!0)):alert("Server Error: "+(r.error||"Unknown error"))}catch(r){alert("Fetch failed: "+r.message)}}async function S(e=""){E(!0);try{const r=e?`/api/admin_list_tickets.php?search=${encodeURIComponent(e)}`:"/api/admin_list_tickets.php",{res:a,data:s}=await p(r);if(!a.ok||s.success===!1)throw new Error(s.error||`HTTP ${a.status}`);b(Array.isArray(s.tickets)?s.tickets:[]),s.tier&&$(s.tier),s.current_user_id&&F(parseInt(s.current_user_id)),s.user_email&&R(s.user_email)}catch(r){y(`Load Error: ${r.message}`)}finally{E(!1)}}async function Z(){try{const{data:e}=await p("/api/list_developers.php");e.success&&T(Array.isArray(e.developers)?e.developers:[])}catch{console.error("Could not load developers"),T([])}}async function h(e,r,a){const s=[...l],n=a===""||a===null?null:parseInt(a);b(o=>o.map(c=>c.id===e?{...c,[r]:n}:c));try{const{res:o,data:c}=await p("/api/patch_ticket.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:e,[r]:n})});if(!o.ok||c.success===!1)throw new Error(c.error||"Update failed")}catch(o){b(s),y(`Update failed: ${o.message}`)}}async function G(e){if(confirm("Delete this ticket permanently?"))try{const{data:r}=await p("/api/delete_ticket.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:e})});if(r.success)S(N.current);else throw new Error(r.error||"Delete failed")}catch(r){y(`Delete failed: ${r.message}`)}}const P=(Array.isArray(l)?l:[]).filter(e=>_==="all"||String(e.status_id)===_).sort((e,r)=>w==="priority"?(parseInt(r.priority_id)||0)-(parseInt(e.priority_id)||0):w==="assignee"?(e.assigned_to_name||"").localeCompare(r.assigned_to_name||""):parseInt(r.id)-parseInt(e.id)),Q=()=>{H(""),U("all"),O("id_desc")},u={total:l?.length??0,open:(Array.isArray(l)?l:[]).filter(e=>parseInt(e.status_id)===1).length,urgent:(Array.isArray(l)?l:[]).filter(e=>parseInt(e.priority_id)===4).length,unassigned:(Array.isArray(l)?l:[]).filter(e=>!e.assigned_to&&!e.claimed_by).length},x=Array.isArray(m)?m:[],X={Senior:x.filter(e=>e&&e.role==="Senior"),Intermediate:x.filter(e=>e&&e.role==="Intermediate"),Junior:x.filter(e=>e&&e.role==="Junior"),Other:x.filter(e=>e&&!["Senior","Intermediate","Junior"].includes(e.role))};return t.jsxs(t.Fragment,{children:[t.jsx("link",{href:"https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;700&display=swap",rel:"stylesheet"}),t.jsx("style",{children:`
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Kumbh Sans', sans-serif; }
+        body { background: #141414; color: #fff; }
+        .page { max-width: 1200px; margin: 0 auto; padding: 4rem 1rem; }
+        .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; }
+        .title-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        h1 { font-size: 2.5rem; background: linear-gradient(to top, #ff0844, #ffb199); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .tier-badge { display: inline-block; align-self: flex-start; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; background: rgba(255, 255, 255, 0.05); color: #f77062; border: 1px solid #f77062; letter-spacing: 1px; }
+        .logout-btn { background: #ff4d4d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 3rem; }
+        .stat-card { background: #1f1f1f; padding: 1.5rem; border-radius: 8px; text-align: center; }
+        .stat-card h3 { font-size: 0.8rem; color: #aaa; margin-bottom: 0.5rem; text-transform: uppercase; }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #fe5196; }
+        .toolbar { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; align-items: flex-end; }
+        .toolbar-group { display: flex; flex-direction: column; gap: 0.5rem; flex: 1; min-width: 200px; }
+        .toolbar-label { font-size: 0.75rem; color: #888; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; }
+        .search-bar { width: 100%; padding: 14px; background: #1f1f1f; border: 1px solid #333; border-radius: 8px; color: white; font-size: 0.9rem; outline: none; }
+        .search-bar:focus { border-color: #fe5196; }
+        .reset-btn { padding: 14px; background: rgba(255, 255, 255, 0.05); color: #888; border: 1px dashed #444; border-radius: 8px; font-size: 0.85rem; font-weight: bold; }
+        .reset-btn:hover { color: #fff; border-color: #fe5196; }
+        .card { background: #1f1f1f; border-radius: 8px; padding: 2rem; margin-bottom: 2.5rem; }
+        .ticket { background: #141414; border-radius: 6px; padding: 1.2rem; margin-bottom: 1rem; border-left: 4px solid #333; transition: all 0.5s ease; }
+        .ticket.highlight { border-left-width: 10px; box-shadow: 0 0 20px rgba(254, 81, 150, 0.4); transform: scale(1.02); background: #1a1a1a; }
+        .ticket-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem; }
+        .ticket-title { font-weight: 600; background: linear-gradient(to top, #f77062, #fe5196); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .attachment-box { margin-top: 10px; padding: 8px; background: rgba(255, 255, 255, 0.03); border-radius: 4px; border: 1px dashed #444; font-size: 0.85rem; }
+        .file-link { color: #3498db; text-decoration: none; display: flex; align-items: center; gap: 5px; }
+        .file-link:hover { text-decoration: underline; }
+        .assignment-indicator { font-size: 0.8rem; color: #2ecc71; margin-top: 5px; display: block; font-style: italic; }
+        .controls-row { display: flex; gap: 10px; margin-top: 1rem; flex-wrap: wrap; align-items: center; }
+        select, button { background: #1f1f1f; border: 1px solid #333; color: #fff; padding: 8px; border-radius: 4px; cursor: pointer; }
+        select:disabled, button:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
+        .claim-btn { background: #2ecc71; color: #fff; font-weight: bold; border: none; }
+        .release-btn { background: #e67e22; color: #fff; font-weight: bold; border: none; }
+        .priority-tag { font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; margin-right: 10px; vertical-align: middle; }
+        .danger { color: #ff4d4d; border-color: #442222; }
+        optgroup { background: #1f1f1f; color: #f77062; font-style: normal; font-weight: bold; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+        .modal-content { background: #1f1f1f; padding: 2rem; border-radius: 12px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; border: 1px solid #333; }
+        .history-item { border-left: 2px solid #fe5196; padding-left: 10px; margin-bottom: 15px; }
+        .val-tag { background: #000; padding: 2px 4px; color: #fe5196; font-family: monospace; }
+      `}),t.jsxs("div",{className:"page",children:[t.jsxs("div",{className:"header-flex",children:[t.jsxs("div",{className:"title-group",children:[t.jsx("h1",{children:"IntelliResolver Ops"}),d&&t.jsxs("div",{className:"tier-badge",children:[d," Access Level"]})]}),t.jsx("a",{href:"/logout.php",className:"logout-btn",children:"Logout"})]}),t.jsxs("div",{className:"toolbar",children:[t.jsxs("div",{className:"toolbar-group",style:{flex:2},children:[t.jsxs("div",{style:{display:"flex",justifyContent:"space-between"},children:[t.jsx("span",{className:"toolbar-label",children:"Search Tickets"}),B&&t.jsx("span",{style:{color:"#fe5196",fontSize:"0.7rem"},children:"Searching..."})]}),t.jsx("input",{type:"text",className:"search-bar",placeholder:"Match against title or content...",value:k,onChange:e=>H(e.target.value)})]}),t.jsxs("div",{className:"toolbar-group",children:[t.jsx("span",{className:"toolbar-label",children:"Filter Status"}),t.jsxs("select",{value:_,onChange:e=>U(e.target.value),style:{padding:"14px"},children:[t.jsx("option",{value:"all",children:"All Tickets"}),t.jsx("option",{value:"1",children:"Open"}),t.jsx("option",{value:"2",children:"In Progress"}),t.jsx("option",{value:"3",children:"Closed"})]})]}),t.jsxs("div",{className:"toolbar-group",children:[t.jsx("span",{className:"toolbar-label",children:"Sort By"}),t.jsxs("select",{value:w,onChange:e=>O(e.target.value),style:{padding:"14px"},children:[t.jsx("option",{value:"id_desc",children:"Newest First"}),t.jsx("option",{value:"priority",children:"Priority (High to Low)"}),t.jsx("option",{value:"assignee",children:"Assignee (A-Z)"})]})]}),t.jsx("button",{className:"reset-btn",onClick:Q,children:"Clear Filters"})]}),t.jsxs("div",{className:"summary-grid",children:[t.jsxs("div",{className:"stat-card",children:[t.jsx("h3",{children:"Active"}),t.jsx("div",{className:"stat-number",children:u.total})]}),t.jsxs("div",{className:"stat-card",style:{borderTop:"3px solid #e74c3c"},children:[t.jsx("h3",{children:"Urgent"}),t.jsx("div",{className:"stat-number",children:u.urgent})]}),t.jsxs("div",{className:"stat-card",style:{borderTop:"3px solid #f1c40f"},children:[t.jsx("h3",{children:"Unassigned"}),t.jsx("div",{className:"stat-number",children:u.unassigned})]}),t.jsxs("div",{className:"stat-card",style:{borderTop:"3px solid #2ecc71"},children:[t.jsx("h3",{children:"Open"}),t.jsx("div",{className:"stat-number",children:u.open})]})]}),C&&t.jsx("div",{style:{color:"#ff4d4d",marginBottom:"1rem"},children:C}),t.jsx("div",{className:"card",children:P.length===0?t.jsx("div",{style:{textAlign:"center",padding:"2rem",color:"#666"},children:"No tickets found matching these filters."}):P.map(e=>{const r=D===parseInt(e.id),a=!e.claimed_by&&(e.assigned_to===null||parseInt(e.assigned_to)===g)&&A!=="admin@intelliresolvers.com",s=parseInt(e.claimed_by)===g;return t.jsxs("div",{className:`ticket ${r?"highlight":""}`,style:{borderLeftColor:e.priority_color},children:[t.jsxs("div",{className:"ticket-header",children:[t.jsxs("div",{children:[t.jsx("span",{className:"priority-tag",style:{background:e.priority_color},children:e.priority_label}),t.jsxs("span",{className:"ticket-title",children:["#",e.id," — ",e.title]}),e.claimed_by_name?t.jsxs("span",{className:"assignment-indicator",children:["✓ Claimed by: ",e.claimed_by_name," ",parseInt(e.claimed_by)===g?"(You)":""]}):e.assigned_to_name?t.jsxs("span",{className:"assignment-indicator",style:{color:"#3498db"},children:["ℹ Assigned to: ",e.assigned_to_name]}):null]}),t.jsx("div",{style:{color:"#888",fontSize:"0.8rem"},children:e.email})]}),t.jsx("div",{style:{margin:"1rem 0",color:"#ccc",lineHeight:"1.6"},children:e.message}),e.file_path&&t.jsxs("div",{className:"attachment-box",children:[t.jsx("strong",{children:"📎 Attachment:"}),t.jsx("a",{href:`/${e.file_path}`,target:"_blank",rel:"noopener noreferrer",className:"file-link",children:"View uploaded file"})]}),t.jsxs("div",{className:"controls-row",children:[a&&t.jsx("button",{className:"claim-btn",onClick:()=>h(e.id,"claimed_by",g),children:"Claim Ticket"}),s&&t.jsx("button",{className:"release-btn",onClick:()=>h(e.id,"claimed_by",""),children:"Release Ticket"}),t.jsxs("select",{value:e.assigned_to||"",onChange:n=>h(e.id,"assigned_to",n.target.value),disabled:d==="Junior"||d==="Intermediate",children:[t.jsx("option",{value:"",children:"Unassigned"}),Object.entries(X).map(([n,o])=>o.length>0&&t.jsx("optgroup",{label:`${n} Tier`,children:o.map(c=>t.jsx("option",{value:c.id,children:c.name},c.id))},n))]}),t.jsxs("select",{value:e.status_id,onChange:n=>h(e.id,"status_id",n.target.value),disabled:A==="admin@intelliresolvers.com",children:[t.jsx("option",{value:"1",children:"Open"}),t.jsx("option",{value:"2",children:"In Progress"}),t.jsx("option",{value:"3",children:"Closed"})]}),t.jsxs("select",{value:e.priority_id,onChange:n=>h(e.id,"priority_id",n.target.value),disabled:d==="Junior"||d==="Intermediate",children:[t.jsx("option",{value:"1",children:"Low"}),t.jsx("option",{value:"2",children:"Medium"}),t.jsx("option",{value:"3",children:"High"}),t.jsx("option",{value:"4",children:"Urgent"})]}),t.jsx("button",{onClick:()=>Y(e),children:"📜 History"}),t.jsx("button",{className:"danger",onClick:()=>G(e.id),disabled:d==="Junior"||d==="Intermediate",children:"Archive"})]})]},e.id)})})]}),M&&t.jsx("div",{className:"modal-overlay",onClick:()=>v(!1),children:t.jsxs("div",{className:"modal-content",onClick:e=>e.stopPropagation(),children:[t.jsxs("h3",{children:["History: ",W]}),t.jsx("div",{style:{marginTop:"20px"},children:!j||j.length===0?t.jsx("p",{children:"No changes recorded yet."}):j.map(e=>t.jsxs("div",{className:"history-item",children:[t.jsx("div",{style:{fontSize:"0.7rem",color:"#777"},children:e.changed_at}),t.jsxs("div",{children:[t.jsx("strong",{children:e.changed_by})," changed ",e.field_changed.replace("_id","")]}),t.jsxs("div",{style:{fontSize:"0.8rem"},children:[t.jsx("span",{className:"val-tag",children:L(e.field_changed,e.old_value)})," → ",t.jsx("span",{className:"val-tag",children:L(e.field_changed,e.new_value)})]})]},e.id))}),t.jsx("button",{style:{marginTop:"20px",width:"100%",padding:"10px"},onClick:()=>v(!1),children:"Close"})]})})]})}const J=document.getElementById("root");J&&ee.createRoot(J).render(t.jsx(te,{}));
