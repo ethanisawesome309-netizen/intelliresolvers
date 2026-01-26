@@ -5,17 +5,19 @@ import fs from "fs/promises";
 import path from "path";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// --- FIX FOR COMMONJS LIBRARIES ---
+// --- FIX FOR COMMONJS LIBRARIES (Node 18 ESM Compatibility) ---
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
 
-// Use pdf-extraction (stable) instead of pdf-parse (broken in Node 18)
+// Use pdf-extraction to avoid DOMMatrix/browser errors in Node
 const pdf = require("pdf-extraction"); 
 const mammoth = require("mammoth");
 
 // --- AI CONFIGURATION ---
+// Using environment variable for security
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+// UPDATED: Changed to "gemini-1.5-flash-latest" to fix the 404 Not Found error
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
 const PORT = 3001; 
 const httpServer = http.createServer();
@@ -61,6 +63,7 @@ io.on("connection", (socket) => {
       const ext = path.extname(fullPath).toLowerCase();
       let aiResponse = "";
 
+      // 1. Handle Images (Screenshots)
       if (['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
         const imageData = await fs.readFile(fullPath);
         const result = await model.generateContent([
@@ -69,12 +72,14 @@ io.on("connection", (socket) => {
         ]);
         aiResponse = result.response.text();
       } 
+      // 2. Handle PDFs
       else if (ext === '.pdf') {
         const dataBuffer = await fs.readFile(fullPath);
-        const data = await pdf(dataBuffer); // Works with pdf-extraction
+        const data = await pdf(dataBuffer); 
         const result = await model.generateContent(`Summarize the following support document: ${data.text}`);
         aiResponse = result.response.text();
       }
+      // 3. Handle Word Docs
       else if (ext === '.docx') {
         const data = await mammoth.extractRawText({ path: fullPath });
         const result = await model.generateContent(`Summarize the following support document: ${data.value}`);
@@ -83,6 +88,7 @@ io.on("connection", (socket) => {
         aiResponse = "Unsupported file format for AI analysis.";
       }
 
+      // Send the summary back to the specific requester
       socket.emit("summary_ready", { ticketId, summary: aiResponse });
 
     } catch (err) {
