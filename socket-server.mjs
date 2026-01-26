@@ -3,12 +3,15 @@ import { Server } from "socket.io";
 import { createClient } from "redis";
 import fs from "fs/promises";
 import path from "path";
-import pdf from "pdf-parse";
-import mammoth from "mammoth";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+// --- FIX FOR COMMONJS LIBRARIES ---
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const pdf = require("pdf-parse");
+const mammoth = require("mammoth");
+
 // --- AI CONFIGURATION ---
-// CHANGED: Using environment variable for security
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
@@ -48,7 +51,6 @@ await redis.subscribe("ticket_updates", (message) => {
 io.on("connection", (socket) => {
   console.log("👤 Browser connected:", socket.id);
 
-  // NEW: AI Summarization Listener
   socket.on("request_summary", async ({ ticketId, filePath }) => {
     console.log(`✨ Summarizing file for Ticket #${ticketId}: ${filePath}`);
     
@@ -57,7 +59,7 @@ io.on("connection", (socket) => {
       const ext = path.extname(fullPath).toLowerCase();
       let aiResponse = "";
 
-      // 1. Handle Images (Screenshots)
+      // 1. Handle Images
       if (['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
         const imageData = await fs.readFile(fullPath);
         const result = await model.generateContent([
@@ -69,7 +71,7 @@ io.on("connection", (socket) => {
       // 2. Handle PDFs
       else if (ext === '.pdf') {
         const dataBuffer = await fs.readFile(fullPath);
-        const data = await pdf(dataBuffer);
+        const data = await pdf(dataBuffer); // pdf-parse now works via require
         const result = await model.generateContent(`Summarize the following support document: ${data.text}`);
         aiResponse = result.response.text();
       }
@@ -82,7 +84,6 @@ io.on("connection", (socket) => {
         aiResponse = "Unsupported file format for AI analysis.";
       }
 
-      // Send the summary back specifically to the requester
       socket.emit("summary_ready", { ticketId, summary: aiResponse });
 
     } catch (err) {
