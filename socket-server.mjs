@@ -3,25 +3,22 @@ import { Server } from "socket.io";
 import { createClient } from "redis";
 import fs from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url"; // Add this
+import { fileURLToPath } from "url"; // Required for absolute pathing
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// --- FIX FOR COMMONJS LIBRARIES ---
+// --- ABSOLUTE PATH FIX FOR COMMONJS LIBRARIES ---
 import { createRequire } from "module";
-
-// Get the absolute path to the current folder
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Create a require function anchored to your root node_modules
+// This forces require to look EXACTLY in /home/site/wwwroot/node_modules
 const require = createRequire(path.join(__dirname, "node_modules/"));
 
 const pdf = require("pdf-extraction"); 
 const mammoth = require("mammoth");
 
-// --- AI CONFIGURATION (2026 Model Update) ---
+// --- AI CONFIGURATION (Updated for Jan 2026) ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// Using the 2026 stable model name to avoid 404
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 const PORT = 3001; 
 const httpServer = http.createServer();
