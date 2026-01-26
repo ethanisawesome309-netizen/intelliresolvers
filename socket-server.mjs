@@ -14,10 +14,8 @@ const pdf = require("pdf-extraction");
 const mammoth = require("mammoth");
 
 // --- AI CONFIGURATION ---
-// Using environment variable for security
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// UPDATED: Changed to "gemini-1.5-flash-latest" to fix the 404 Not Found error
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 const PORT = 3001; 
 const httpServer = http.createServer();
