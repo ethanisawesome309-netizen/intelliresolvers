@@ -8,7 +8,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // --- FIX FOR COMMONJS LIBRARIES ---
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-const pdf = require("pdf-parse");
+// Switched to pdf-extraction to avoid DOMMatrix errors
+const pdf = require("pdf-extraction"); 
 const mammoth = require("mammoth");
 
 // --- AI CONFIGURATION ---
@@ -71,7 +72,8 @@ io.on("connection", (socket) => {
       // 2. Handle PDFs
       else if (ext === '.pdf') {
         const dataBuffer = await fs.readFile(fullPath);
-        const data = await pdf(dataBuffer); // pdf-parse now works via require
+        // pdf-extraction uses the same API as pdf-parse
+        const data = await pdf(dataBuffer); 
         const result = await model.generateContent(`Summarize the following support document: ${data.text}`);
         aiResponse = result.response.text();
       }
