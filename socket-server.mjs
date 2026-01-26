@@ -8,7 +8,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // --- FIX FOR COMMONJS LIBRARIES ---
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
-// Switched to pdf-extraction to avoid DOMMatrix errors
+
+// Use pdf-extraction (stable) instead of pdf-parse (broken in Node 18)
 const pdf = require("pdf-extraction"); 
 const mammoth = require("mammoth");
 
@@ -60,7 +61,6 @@ io.on("connection", (socket) => {
       const ext = path.extname(fullPath).toLowerCase();
       let aiResponse = "";
 
-      // 1. Handle Images
       if (['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
         const imageData = await fs.readFile(fullPath);
         const result = await model.generateContent([
@@ -69,15 +69,12 @@ io.on("connection", (socket) => {
         ]);
         aiResponse = result.response.text();
       } 
-      // 2. Handle PDFs
       else if (ext === '.pdf') {
         const dataBuffer = await fs.readFile(fullPath);
-        // pdf-extraction uses the same API as pdf-parse
-        const data = await pdf(dataBuffer); 
+        const data = await pdf(dataBuffer); // Works with pdf-extraction
         const result = await model.generateContent(`Summarize the following support document: ${data.text}`);
         aiResponse = result.response.text();
       }
-      // 3. Handle Word Docs
       else if (ext === '.docx') {
         const data = await mammoth.extractRawText({ path: fullPath });
         const result = await model.generateContent(`Summarize the following support document: ${data.value}`);
