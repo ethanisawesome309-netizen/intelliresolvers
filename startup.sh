@@ -2,7 +2,8 @@
 
 # --- 1. ENVIRONMENT SETUP ---
 echo "Starting Startup Script at $(date)"
-# Note: GEMINI_API_KEY is now pulled from Azure App Settings automatically.
+# Force the Node path to ensure modules are found
+export NODE_PATH=/home/site/wwwroot/node_modules
 
 # --- 2. DEPENDENCY INSTALLATION ---
 if ! command -v node &> /dev/null; then
@@ -14,7 +15,8 @@ fi
 
 # --- NEW INSTALLS FOR AI DOCUMENT READER ---
 cd /home/site/wwwroot
-npm install pdf-parse mammoth @google/generative-ai --save
+# Added --prefer-offline to speed up restarts and --no-save to avoid lockfile churn
+npm install pdf-extraction mammoth @google/generative-ai --save
 
 # --- 3. SERVICE: REDIS ---
 service redis-server start || redis-server --daemonize yes
@@ -29,8 +31,9 @@ fi
 cd /home/site/wwwroot
 NODE_EXE=$(which node)
 pkill -f socket-server.mjs || true
-# Use nohup to ensure the bridge stays alive
-nohup $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
+
+# Explicitly passing the absolute path to node_modules in the execution command
+nohup env NODE_PATH=/home/site/wwwroot/node_modules $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
 
 # --- 6. PERMISSIONS & DIRECTORIES ---
 mkdir -p /home/site/wwwroot/uploads/tickets
