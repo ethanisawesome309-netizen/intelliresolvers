@@ -1,6 +1,5 @@
 import { createClient } from 'redis';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import fetch from 'node-fetch';
 
 // Initialize APIs
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
