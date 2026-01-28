@@ -2,24 +2,33 @@
 
 # --- 1. ENVIRONMENT SETUP ---
 echo "Starting Startup Script at $(date)"
-# Force the Node path to ensure modules are found
 export NODE_PATH=/home/site/wwwroot/node_modules
 
-# --- 2. DEPENDENCY INSTALLATION ---
-if ! command -v node &> /dev/null; then
-    apt-get update && apt-get install -y curl
+# --- 2. DEPENDENCY INSTALLATION (Upgraded to Redis Stack) ---
+if ! command -v redis-stack-server &> /dev/null; then
+    apt-get update && apt-get install -y curl gpg lsb-release --no-install-recommends
+    
+    # Add official Redis Stack repository
+    curl -fsSL https://packages.redis.io/gpg | gpg --dearmor -o /usr/share/keyrings/redis-archive-keyring.gpg
+    echo "deb [signed-by=/usr/share/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/redis.list
+    
+    # Install Node.js 18
     curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt-get install -y nodejs redis-server --no-install-recommends
+    
+    # Install Node and Redis Stack
+    apt-get update && apt-get install -y nodejs redis-stack-server --no-install-recommends
     hash -r 
 fi
 
 # --- NEW INSTALLS FOR AI DOCUMENT READER ---
 cd /home/site/wwwroot
-# Added --prefer-offline to speed up restarts and --no-save to avoid lockfile churn
 npm install pdf-extraction mammoth @google/generative-ai --save
 
-# --- 3. SERVICE: REDIS ---
-service redis-server start || redis-server --daemonize yes
+# --- 3. SERVICE: REDIS STACK ---
+# Stop default redis if it's running to free up port 6379
+service redis-server stop || true
+# Start Redis Stack with Search and Vector modules
+/opt/redis-stack/bin/redis-stack-server --daemonize yes
 
 # --- 4. NGINX CONFIGURATION ---
 if [ -f /home/site/wwwroot/default.txt ]; then
@@ -31,8 +40,6 @@ fi
 cd /home/site/wwwroot
 NODE_EXE=$(which node)
 pkill -f socket-server.mjs || true
-
-# Explicitly passing the absolute path to node_modules in the execution command
 nohup env NODE_PATH=/home/site/wwwroot/node_modules $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
 
 # --- 6. PERMISSIONS & DIRECTORIES ---
