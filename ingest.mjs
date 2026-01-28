@@ -1,13 +1,13 @@
 import { createClient } from 'redis';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Initialize APIs
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const redis = createClient();
 await redis.connect();
 
 async function getEmbedding(text) {
-    const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+    // UPDATED MODEL NAME FOR 2026
+    const model = genAI.getGenerativeModel({ model: "gemini-embedding-001" }); 
     const result = await model.embedContent({
         content: { parts: [{ text }] },
         taskType: "RETRIEVAL_DOCUMENT",
@@ -16,34 +16,34 @@ async function getEmbedding(text) {
 }
 
 async function runIngestion() {
-    console.log("🚀 Starting HN Ingestion...");
+    console.log("🚀 Starting HN Ingestion with gemini-embedding-001...");
     
-    // 1. Get IDs of top stories
-    const topIdsRes = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
-    const topIds = (await topIdsRes.json()).slice(0, 20); // Get top 20 for testing
+    try {
+        const topIdsRes = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');
+        const topIds = (await topIdsRes.json()).slice(0, 20);
 
-    for (const id of topIds) {
-        // 2. Fetch story details
-        const storyRes = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
-        const story = await storyRes.json();
-        
-        if (story.title) {
-            console.log(`📝 Processing: ${story.title}`);
+        for (const id of topIds) {
+            const storyRes = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
+            const story = await storyRes.json();
             
-            // 3. Vectorize the title
-            const vectorArray = await getEmbedding(story.title);
-            
-            // 4. Save to Redis Hash (matches the index prefix 'hn:')
-            await redis.hSet(`hn:${id}`, {
-                title: story.title,
-                content: story.url || "No URL provided",
-                vector: Buffer.from(new Float32Array(vectorArray).buffer)
-            });
+            if (story && story.title) {
+                console.log(`📝 Processing: ${story.title}`);
+                const vectorArray = await getEmbedding(story.title);
+                
+                await redis.hSet(`hn:${id}`, {
+                    title: story.title,
+                    content: story.url || "No URL",
+                    vector: Buffer.from(new Float32Array(vectorArray).buffer)
+                });
+            }
         }
+        console.log("✅ Ingestion successfully completed!");
+    } catch (error) {
+        console.error("❌ Fatal Error during ingestion:", error);
+    } finally {
+        await redis.disconnect();
+        process.exit();
     }
-
-    console.log("✅ Ingestion complete!");
-    process.exit();
 }
 
-runIngestion().catch(console.error);
+runIngestion();
