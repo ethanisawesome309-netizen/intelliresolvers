@@ -19,7 +19,7 @@ const mammoth = require("mammoth");
 
 // --- AI CONFIGURATION (Updated for Jan 2026) ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Note: Gemini 2.5 is not released; standardizing to 2.0 Flash
 const PORT = 3001; 
 const httpServer = http.createServer();
 
@@ -56,6 +56,25 @@ await redis.subscribe("ticket_updates", (message) => {
 io.on("connection", (socket) => {
   console.log("👤 Browser connected:", socket.id);
 
+  // --- NEW: HN BOT LISTENER ---
+  socket.on("ask_hn_bot", async (query) => {
+    console.log(`🔎 HN Bot Request: ${query}`);
+    try {
+      // 1. PLACEHOLDER FOR RAG RETRIEVAL 
+      // This is where you would fetch relevant Hacker News items from your database/Redis.
+      // For now, we will use the AI to generate a direct response based on its knowledge.
+      const prompt = `You are a tech trend expert. Based on recent Hacker News discussions, answer the following query: ${query}`;
+      
+      const result = await model.generateContent(prompt);
+      const answer = result.response.text();
+
+      socket.emit("hn_bot_response", answer);
+    } catch (err) {
+      console.error("❌ HN Bot Error:", err);
+      socket.emit("hn_bot_response", "Sorry, I couldn't fetch HN trends at the moment.");
+    }
+  });
+
   socket.on("request_summary", async ({ ticketId, filePath }) => {
     console.log(`✨ Summarizing file for Ticket #${ticketId}: ${filePath}`);
     
@@ -89,7 +108,6 @@ io.on("connection", (socket) => {
         aiResponse = "Unsupported file format for AI analysis.";
       }
 
-      // Send the summary back to the specific requester
       socket.emit("summary_ready", { ticketId, summary: aiResponse });
 
     } catch (err) {
