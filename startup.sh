@@ -20,36 +20,39 @@ if ! command -v redis-stack-server &> /dev/null; then
     hash -r 
 fi
 
-# --- NEW INSTALLS FOR AI DOCUMENT READER ---
+# --- 3. INSTALLS FOR AI & GROQ ---
 cd /home/site/wwwroot
-npm install pdf-extraction mammoth @google/generative-ai --save
+# We use --no-save temporarily if permissions are tight, but keeping your --save for persistence
+echo "Running critical dependency sync..."
+npm install pdf-extraction mammoth @google/generative-ai groq-sdk --save
 
-# --- 3. SERVICE: REDIS STACK ---
-# Stop default redis if it's running to free up port 6379
+# --- 4. SERVICE: REDIS STACK ---
 service redis-server stop || true
-# Start Redis Stack with Search and Vector modules
 /opt/redis-stack/bin/redis-stack-server --daemonize yes
 
-# --- 4. NGINX CONFIGURATION ---
+# --- 5. NGINX CONFIGURATION ---
 if [ -f /home/site/wwwroot/default.txt ]; then
     cp /home/site/wwwroot/default.txt /etc/nginx/sites-available/default
     service nginx restart
 fi
 
-# --- 5. SERVICE: NODE.JS BRIDGE ---
+# --- 6. SERVICE: NODE.JS BRIDGE ---
 cd /home/site/wwwroot
 NODE_EXE=$(which node)
 pkill -f socket-server.mjs || true
+
+# Explicitly passing NODE_PATH again to the execution to ensure ESM resolution
+echo "Launching Socket Server..."
 nohup env NODE_PATH=/home/site/wwwroot/node_modules $NODE_EXE socket-server.mjs > node_logs.txt 2>&1 &
 
-# --- 6. PERMISSIONS & DIRECTORIES ---
+# --- 7. PERMISSIONS & DIRECTORIES ---
 mkdir -p /home/site/wwwroot/uploads/tickets
 mkdir -p /var/run/php
 chown -R www-data:www-data /home/site/wwwroot /var/run/php
 chmod -R 755 /home/site/wwwroot
 chmod -R 777 /home/site/wwwroot/uploads
 
-# --- 7. START PHP-FPM ---
+# --- 8. START PHP-FPM ---
 pkill -f php-fpm || true
 
 # FINAL CUSTOM PERMISSIONS & RELOAD
