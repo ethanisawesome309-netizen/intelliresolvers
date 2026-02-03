@@ -3,23 +3,27 @@ import { Server } from "socket.io";
 import { createClient } from "redis";
 import fs from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url"; // Required for absolute pathing
+import { fileURLToPath } from "url";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+// ADDED: Groq SDK
+import Groq from "groq-sdk";
 
 // --- ABSOLUTE PATH FIX FOR COMMONJS LIBRARIES ---
 import { createRequire } from "module";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// This forces require to look EXACTLY in /home/site/wwwroot/node_modules
 const require = createRequire(path.join(__dirname, "node_modules/"));
 
 const pdf = require("pdf-extraction"); 
 const mammoth = require("mammoth");
 
-// --- AI CONFIGURATION (Updated for Jan 2026) ---
+// --- AI CONFIGURATION ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); 
+
+// ADDED: Initialize Groq
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
 const PORT = 3001; 
 const httpServer = http.createServer();
 
@@ -37,7 +41,7 @@ const io = new Server(httpServer, {
   transports: ['websocket', 'polling'] 
 });
 
-// --- NEW: RETRY HELPER FOR QUOTA ERRORS ---
+// --- RETRY HELPER FOR QUOTA ERRORS ---
 const withRetry = async (fn, maxRetries = 3, baseDelay = 5000) => {
   for (let i = 0; i < maxRetries; i++) {
     try {
@@ -74,30 +78,43 @@ await redis.subscribe("ticket_updates", (message) => {
 io.on("connection", (socket) => {
   console.log("👤 Browser connected:", socket.id);
 
-  // --- HN BOT LISTENER (With Retry Logic) ---
+  // --- HN BOT LISTENER (With Dual-AI Fallback) ---
   socket.on("ask_hn_bot", async (query) => {
     console.log(`🔎 HN Bot Request: ${query}`);
+    const prompt = `You are a tech trend expert. Based on recent Hacker News discussions, answer concisely: ${query}`;
+    
     try {
+      // Step 1: Try Gemini with Retries
       const answer = await withRetry(async () => {
-        const prompt = `You are a tech trend expert. Based on recent Hacker News discussions, answer concisely: ${query}`;
         const result = await model.generateContent(prompt);
         return result.response.text();
       });
-
       socket.emit("hn_bot_response", answer);
+
     } catch (err) {
-      console.error("❌ HN Bot Error:", err);
-      // Send a clean error message back to the UI to stop the spinner
-      const errorMsg = err.status === 429 
-        ? "⚠️ AI is currently at its limit. Please try again in 1 minute." 
-        : "Sorry, I couldn't fetch HN trends at the moment.";
-      socket.emit("hn_bot_response", errorMsg);
+      // Step 2: Fallback to Groq if Gemini is truly exhausted (429)
+      if (err.status === 429 || err.message?.includes("429")) {
+        console.warn("⚠️ Gemini exhausted. Switching to Groq/Llama...");
+        try {
+          const chatCompletion = await groq.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "llama-3.3-70b-versatile",
+          });
+          const groqAnswer = chatCompletion.choices[0].message.content;
+          socket.emit("hn_bot_response", groqAnswer);
+        } catch (groqErr) {
+          console.error("❌ Both AI services failed:", groqErr);
+          socket.emit("hn_bot_response", "⚠️ AI services are currently busy. Please try again later.");
+        }
+      } else {
+        console.error("❌ HN Bot Error:", err);
+        socket.emit("hn_bot_response", "Sorry, I couldn't fetch HN trends at the moment.");
+      }
     }
   });
 
   socket.on("request_summary", async ({ ticketId, filePath }) => {
     console.log(`✨ Summarizing file for Ticket #${ticketId}: ${filePath}`);
-    
     try {
       const fullPath = path.resolve('/home/site/wwwroot', filePath);
       const ext = path.extname(fullPath).toLowerCase();
