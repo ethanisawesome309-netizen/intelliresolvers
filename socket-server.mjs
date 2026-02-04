@@ -24,9 +24,11 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 const embedModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Neon Postgres Connection
+// Neon Postgres Connection - FIXED SSL HANDLING
 const pool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: process.env.DATABASE_URL.includes('sslrootcert=system') 
+        ? process.env.DATABASE_URL.split('?')[0] + "?sslmode=require" 
+        : process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
 
@@ -106,22 +108,32 @@ io.on("connection", (socket) => {
                 rawText = (await mammoth.extractRawText({ path: fullPath })).value;
             } else if (['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
                 const img = await fs.readFile(fullPath);
-                const res = await model.generateContent([
-                    "Describe errors in this image:",
-                    { inlineData: { data: img.toString("base64"), mimeType: `image/${ext.slice(1)}` } }
-                ]);
-                rawText = res.response.text();
+                try {
+                    const res = await model.generateContent([
+                        "Describe errors in this image:",
+                        { inlineData: { data: img.toString("base64"), mimeType: `image/${ext.replace('.', '')}` } }
+                    ]);
+                    rawText = res.response.text();
+                } catch (imgErr) {
+                    rawText = "Image analysis unavailable (Gemini Limit). Skipping image details.";
+                }
             }
 
-            // 3. Generate Summary with Fallback
+            // 3. Generate Summary with Fallback (FIXED)
             try {
+                console.log("Attempting Gemini Summary...");
                 summary = await withRetry(() => model.generateContent(`Summarize: ${rawText}`).then(r => r.response.text()));
             } catch (err) {
-                const chat = await groq.chat.completions.create({
-                    messages: [{ role: "user", content: `Summarize: ${rawText}` }],
-                    model: "llama-3.3-70b-versatile",
-                });
-                summary = chat.choices[0].message.content;
+                console.warn("⚠️ Gemini Quota Exceeded. Falling back to Groq for summary...");
+                try {
+                    const chat = await groq.chat.completions.create({
+                        messages: [{ role: "user", content: `Summarize the following technical support data: ${rawText}` }],
+                        model: "llama-3.3-70b-versatile",
+                    });
+                    summary = chat.choices[0].message.content;
+                } catch (groqErr) {
+                    throw new Error("Both Gemini and Groq failed.");
+                }
             }
 
             // 4. Save to Neon Memory
