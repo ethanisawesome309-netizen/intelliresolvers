@@ -20,11 +20,11 @@ if ! command -v redis-stack-server &> /dev/null; then
     hash -r 
 fi
 
-# --- 3. INSTALLS FOR AI & GROQ ---
+# --- 3. INSTALLS FOR AI, GROQ & NEON MEMORY ---
 cd /home/site/wwwroot
-# We use --no-save temporarily if permissions are tight, but keeping your --save for persistence
 echo "Running critical dependency sync..."
-npm install pdf-extraction mammoth @google/generative-ai groq-sdk --save
+# MODIFIED: Added pg and @langchain/textsplitters
+npm install pdf-extraction mammoth @google/generative-ai groq-sdk pg @langchain/textsplitters --save
 
 # --- 4. SERVICE: REDIS STACK ---
 service redis-server stop || true
@@ -40,6 +40,11 @@ fi
 cd /home/site/wwwroot
 NODE_EXE=$(which node)
 pkill -f socket-server.mjs || true
+
+# Check for Database URL (Neon)
+if [ -z "$DATABASE_URL" ]; then
+    echo "⚠️ WARNING: DATABASE_URL is not set. AI Memory will fail to connect."
+fi
 
 # Explicitly passing NODE_PATH again to the execution to ensure ESM resolution
 echo "Launching Socket Server..."
