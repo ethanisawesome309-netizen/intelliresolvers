@@ -90,16 +90,21 @@ io.on("connection", (socket) => {
             let summary = "";
 
             // 1. Check if we already have a summary in Postgres to save API calls
-            const existing = await pool.query('SELECT summary FROM ticket_summaries WHERE ticket_id = $1', [ticketId]);
-            if (existing.rows.length > 0) {
-                return socket.emit("summary_ready", { ticketId, summary: existing.rows[0].summary });
+            try {
+                const existing = await pool.query('SELECT summary FROM ticket_summaries WHERE ticket_id = $1', [ticketId]);
+                if (existing.rows.length > 0) {
+                    return socket.emit("summary_ready", { ticketId, summary: existing.rows[0].summary });
+                }
+            } catch (dbErr) {
+                console.error("⚠️ Database check failed, continuing to AI...", dbErr.message);
             }
 
-            // 2. Extract Text (Unchanged Logic)
-            if (['.pdf'].includes(ext)) {
+            // 2. Extract Text (Preserved Logic)
+            if (ext === '.pdf') {
                 rawText = (await pdf(await fs.readFile(fullPath))).text;
-            } else if (['.png', '.jpg'].includes(ext)) {
-                // Images still require Gemini (Groq can't see them yet)
+            } else if (ext === '.docx') {
+                rawText = (await mammoth.extractRawText({ path: fullPath })).value;
+            } else if (['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
                 const img = await fs.readFile(fullPath);
                 const res = await model.generateContent([
                     "Describe errors in this image:",
@@ -120,13 +125,20 @@ io.on("connection", (socket) => {
             }
 
             // 4. Save to Neon Memory
-            await pool.query('INSERT INTO ticket_summaries (ticket_id, summary) VALUES ($1, $2) ON CONFLICT (ticket_id) DO NOTHING', [ticketId, summary]);
+            try {
+                await pool.query('INSERT INTO ticket_summaries (ticket_id, summary) VALUES ($1, $2) ON CONFLICT (ticket_id) DO NOTHING', [ticketId, summary]);
+            } catch (saveErr) {
+                console.error("⚠️ Failed to save summary to Neon:", saveErr.message);
+            }
 
             socket.emit("summary_ready", { ticketId, summary });
         } catch (err) {
+            console.error("❌ Summary Error:", err);
             socket.emit("summary_ready", { ticketId, summary: "Error: AI services busy." });
         }
     });
 });
 
-httpServer.listen(3001, "0.0.0.0");
+httpServer.listen(3001, "0.0.0.0", () => {
+    console.log(`🚀 Socket.IO bridge active on port 3001`);
+});
