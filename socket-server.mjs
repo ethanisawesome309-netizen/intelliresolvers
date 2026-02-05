@@ -24,10 +24,10 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 const embedModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Neon Postgres Connection - FIXED SSL HANDLING
+// Neon Postgres Connection - UPDATED FOR VERIFY-FULL & SYSTEM FIX
 const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL.includes('sslrootcert=system') 
-        ? process.env.DATABASE_URL.split('?')[0] + "?sslmode=require" 
+        ? process.env.DATABASE_URL.split('?')[0] + "?sslmode=verify-full" 
         : process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false }
 });
@@ -66,7 +66,6 @@ io.on("connection", (socket) => {
     socket.on("ask_hn_bot", async (query) => {
         const prompt = `Tech trend expert answer: ${query}`;
         try {
-            // Attempt Gemini
             const answer = await withRetry(() => model.generateContent(prompt).then(r => r.response.text()));
             socket.emit("hn_bot_response", answer);
         } catch (err) {
@@ -83,64 +82,69 @@ io.on("connection", (socket) => {
         }
     });
 
-    // Summary with Neon Memory & Fallback
-    socket.on("request_summary", async ({ ticketId, filePath }) => {
+    // Summary with Neon Memory, Text-Only Support & Fallback
+    socket.on("request_summary", async ({ ticketId, filePath, description }) => {
         try {
-            const fullPath = path.resolve('/home/site/wwwroot', filePath);
-            const ext = path.extname(fullPath).toLowerCase();
             let rawText = "";
             let summary = "";
 
-            // 1. Check if we already have a summary in Postgres to save API calls
+            // 1. Check if we already have a summary in Postgres
             try {
                 const existing = await pool.query('SELECT summary FROM ticket_summaries WHERE ticket_id = $1', [ticketId]);
                 if (existing.rows.length > 0) {
                     return socket.emit("summary_ready", { ticketId, summary: existing.rows[0].summary });
                 }
             } catch (dbErr) {
-                console.error("⚠️ Database check failed, continuing to AI...", dbErr.message);
+                console.error("⚠️ Database check failed:", dbErr.message);
             }
 
-            // 2. Extract Text (Preserved Logic)
-            if (ext === '.pdf') {
-                rawText = (await pdf(await fs.readFile(fullPath))).text;
-            } else if (ext === '.docx') {
-                rawText = (await mammoth.extractRawText({ path: fullPath })).value;
-            } else if (['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
-                const img = await fs.readFile(fullPath);
-                try {
-                    const res = await model.generateContent([
-                        "Describe errors in this image:",
-                        { inlineData: { data: img.toString("base64"), mimeType: `image/${ext.replace('.', '')}` } }
-                    ]);
-                    rawText = res.response.text();
-                } catch (imgErr) {
-                    rawText = "Image analysis unavailable (Gemini Limit). Skipping image details.";
+            // 2. Extract Content (Support both File and Text-only)
+            if (filePath) {
+                const fullPath = path.resolve('/home/site/wwwroot', filePath);
+                const ext = path.extname(fullPath).toLowerCase();
+                
+                if (ext === '.pdf') {
+                    rawText = (await pdf(await fs.readFile(fullPath))).text;
+                } else if (ext === '.docx') {
+                    rawText = (await mammoth.extractRawText({ path: fullPath })).value;
+                } else if (['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
+                    const img = await fs.readFile(fullPath);
+                    try {
+                        const res = await model.generateContent([
+                            "Describe errors in this image:",
+                            { inlineData: { data: img.toString("base64"), mimeType: `image/${ext.replace('.', '')}` } }
+                        ]);
+                        rawText = res.response.text();
+                    } catch (imgErr) {
+                        rawText = "Image analysis unavailable (Gemini Limit).";
+                    }
                 }
+            } else if (description) {
+                // FALLBACK: Use ticket description if no file exists
+                rawText = description;
             }
 
-            // 3. Generate Summary with Fallback (FIXED)
+            if (!rawText || rawText.trim().length < 2) {
+                return socket.emit("summary_ready", { ticketId, summary: "No content found to summarize." });
+            }
+
+            // 3. Generate Summary with Fallback
             try {
-                console.log("Attempting Gemini Summary...");
-                summary = await withRetry(() => model.generateContent(`Summarize: ${rawText}`).then(r => r.response.text()));
+                summary = await withRetry(() => model.generateContent(`Summarize the following support request: ${rawText}`).then(r => r.response.text()));
             } catch (err) {
-                console.warn("⚠️ Gemini Quota Exceeded. Falling back to Groq for summary...");
-                try {
-                    const chat = await groq.chat.completions.create({
-                        messages: [{ role: "user", content: `Summarize the following technical support data: ${rawText}` }],
-                        model: "llama-3.3-70b-versatile",
-                    });
-                    summary = chat.choices[0].message.content;
-                } catch (groqErr) {
-                    throw new Error("Both Gemini and Groq failed.");
-                }
+                console.warn("⚠️ Gemini Limit. Using Groq fallback...");
+                const chat = await groq.chat.completions.create({
+                    messages: [{ role: "user", content: `Summarize the following support request: ${rawText}` }],
+                    model: "llama-3.3-70b-versatile",
+                });
+                summary = chat.choices[0].message.content;
             }
 
             // 4. Save to Neon Memory
             try {
-                await pool.query('INSERT INTO ticket_summaries (ticket_id, summary) VALUES ($1, $2) ON CONFLICT (ticket_id) DO NOTHING', [ticketId, summary]);
+                await pool.query('INSERT INTO ticket_summaries (ticket_id, summary) VALUES ($1, $2) ON CONFLICT (ticket_id) DO UPDATE SET summary = EXCLUDED.summary', [ticketId, summary]);
             } catch (saveErr) {
-                console.error("⚠️ Failed to save summary to Neon:", saveErr.message);
+                console.error("⚠️ Database save failed:", saveErr.message);
             }
 
             socket.emit("summary_ready", { ticketId, summary });
