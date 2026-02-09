@@ -82,6 +82,29 @@ io.on("connection", (socket) => {
         }
     });
 
+    // PROJECT 1: Semantic Search Listener
+    socket.on("find_similar_tickets", async (queryText) => {
+        try {
+            const result = await withRetry(() => embedModel.embedContent(queryText));
+            const queryVector = result.embedding.values;
+
+            const sql = `
+                SELECT tk.ticket_id, tk.content, ts.summary,
+                       1 - (tk.embedding <=> $1) AS similarity_score
+                FROM ticket_knowledge tk
+                LEFT JOIN ticket_summaries ts ON tk.ticket_id = ts.ticket_id
+                ORDER BY tk.embedding <=> $1
+                LIMIT 3;
+            `;
+            
+            const { rows } = await pool.query(sql, [JSON.stringify(queryVector)]);
+            socket.emit("similar_tickets_results", rows);
+        } catch (err) {
+            console.error("❌ Semantic Search Error:", err);
+            socket.emit("similar_tickets_results", { error: "Search failed." });
+        }
+    });
+
     // Summary with Neon Memory, Text-Only Support & Fallback
     socket.on("request_summary", async ({ ticketId, filePath, description }) => {
         try {
@@ -140,9 +163,19 @@ io.on("connection", (socket) => {
                 summary = chat.choices[0].message.content;
             }
 
-            // 4. Save to Neon Memory
+            // 4. Save to Neon Memory & Generate Embedding for Semantic Search
             try {
+                // Save text summary
                 await pool.query('INSERT INTO ticket_summaries (ticket_id, summary) VALUES ($1, $2) ON CONFLICT (ticket_id) DO UPDATE SET summary = EXCLUDED.summary', [ticketId, summary]);
+                
+                // Generate and save vector embedding
+                const embedResult = await withRetry(() => embedModel.embedContent(rawText));
+                const vector = embedResult.embedding.values;
+
+                await pool.query(
+                    'INSERT INTO ticket_knowledge (ticket_id, content, embedding) VALUES ($1, $2, $3) ON CONFLICT (ticket_id) DO NOTHING',
+                    [ticketId, rawText.substring(0, 1000), JSON.stringify(vector)]
+                );
             } catch (saveErr) {
                 console.error("⚠️ Database save failed:", saveErr.message);
             }
