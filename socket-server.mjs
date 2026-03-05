@@ -2,11 +2,12 @@ import http from "http";
 import { Server } from "socket.io";
 import { createClient } from "redis";
 import fs from "fs/promises";
+import { watch } from "fs"; // Moved up for organization
 import path from "path";
 import { fileURLToPath } from "url";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import Groq from "groq-sdk"; // ADDED: Groq for fallback
-import pg from "pg"; // ADDED: Postgres for Memory
+import Groq from "groq-sdk";
+import pg from "pg";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 
 // --- ABSOLUTE PATH FIX ---
@@ -24,7 +25,6 @@ const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 const embedModel = genAI.getGenerativeModel({ model: "text-embedding-004" });
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// Neon Postgres Connection - UPDATED FOR VERIFY-FULL & SYSTEM FIX
 const pool = new pg.Pool({
     connectionString: process.env.DATABASE_URL.includes('sslrootcert=system') 
         ? process.env.DATABASE_URL.split('?')[0] + "?sslmode=verify-full" 
@@ -50,19 +50,28 @@ const withRetry = async (fn, maxRetries = 2) => {
 };
 
 const httpServer = http.createServer();
+
+// --- FIXED SOCKET.IO CONFIG ---
 const io = new Server(httpServer, {
-    path: "/socket.io/",
-    cors: { origin: "*", methods: ["GET", "POST"] }
+    // REMOVED explicit path: "/socket.io/" as it often causes double-pathing issues
+    cors: { 
+        origin: true, // Dynamically allow the frontend origin
+        methods: ["GET", "POST"],
+        credentials: true 
+    },
+    allowEIO3: true, // Ensure compatibility with older clients
+    transports: ['websocket', 'polling'] // Explicitly allow both
 });
 
-// --- REDIS SETUP (Unchanged) ---
+// --- REDIS SETUP ---
 const redis = createClient({ socket: { host: "127.0.0.1", port: 6379 } });
 await redis.connect();
 await redis.subscribe("ticket_updates", (msg) => io.emit("refresh_tickets", JSON.parse(msg)));
 
 // --- SOCKET LOGIC ---
 io.on("connection", (socket) => {
-    // HN Bot with Groq Fallback
+    console.log(`📡 New Connection: ${socket.id}`);
+
     socket.on("ask_hn_bot", async (query) => {
         const prompt = `Tech trend expert answer: ${query}`;
         try {
@@ -82,12 +91,10 @@ io.on("connection", (socket) => {
         }
     });
 
-    // PROJECT 1: Semantic Search Listener
     socket.on("find_similar_tickets", async (queryText) => {
         try {
             const result = await withRetry(() => embedModel.embedContent(queryText));
             const queryVector = result.embedding.values;
-
             const sql = `
                 SELECT tk.ticket_id, tk.content, ts.summary,
                        1 - (tk.embedding <=> $1) AS similarity_score
@@ -96,7 +103,6 @@ io.on("connection", (socket) => {
                 ORDER BY tk.embedding <=> $1
                 LIMIT 3;
             `;
-            
             const { rows } = await pool.query(sql, [JSON.stringify(queryVector)]);
             socket.emit("similar_tickets_results", rows);
         } catch (err) {
@@ -105,13 +111,11 @@ io.on("connection", (socket) => {
         }
     });
 
-    // Summary with Neon Memory, Text-Only Support & Fallback
     socket.on("request_summary", async ({ ticketId, filePath, description }) => {
         try {
             let rawText = "";
             let summary = "";
 
-            // 1. Check if we already have a summary in Postgres
             try {
                 const existing = await pool.query('SELECT summary FROM ticket_summaries WHERE ticket_id = $1', [ticketId]);
                 if (existing.rows.length > 0) {
@@ -121,7 +125,6 @@ io.on("connection", (socket) => {
                 console.error("⚠️ Database check failed:", dbErr.message);
             }
 
-            // 2. Extract Content (Support both File and Text-only)
             if (filePath) {
                 const fullPath = path.resolve('/home/site/wwwroot', filePath);
                 const ext = path.extname(fullPath).toLowerCase();
@@ -143,7 +146,6 @@ io.on("connection", (socket) => {
                     }
                 }
             } else if (description) {
-                // FALLBACK: Use ticket description if no file exists
                 rawText = description;
             }
 
@@ -151,11 +153,9 @@ io.on("connection", (socket) => {
                 return socket.emit("summary_ready", { ticketId, summary: "No content found to summarize." });
             }
 
-            // 3. Generate Summary with Fallback
             try {
                 summary = await withRetry(() => model.generateContent(`Summarize the following support request: ${rawText}`).then(r => r.response.text()));
             } catch (err) {
-                console.warn("⚠️ Gemini Limit. Using Groq fallback...");
                 const chat = await groq.chat.completions.create({
                     messages: [{ role: "user", content: `Summarize the following support request: ${rawText}` }],
                     model: "llama-3.3-70b-versatile",
@@ -163,15 +163,10 @@ io.on("connection", (socket) => {
                 summary = chat.choices[0].message.content;
             }
 
-            // 4. Save to Neon Memory & Generate Embedding for Semantic Search
             try {
-                // Save text summary
                 await pool.query('INSERT INTO ticket_summaries (ticket_id, summary) VALUES ($1, $2) ON CONFLICT (ticket_id) DO UPDATE SET summary = EXCLUDED.summary', [ticketId, summary]);
-                
-                // Generate and save vector embedding
                 const embedResult = await withRetry(() => embedModel.embedContent(rawText));
                 const vector = embedResult.embedding.values;
-
                 await pool.query(
                     'INSERT INTO ticket_knowledge (ticket_id, content, embedding) VALUES ($1, $2, $3) ON CONFLICT (ticket_id) DO NOTHING',
                     [ticketId, rawText.substring(0, 1000), JSON.stringify(vector)]
@@ -188,11 +183,8 @@ io.on("connection", (socket) => {
     });
 });
 
-// --- ADDED: CAMEL SMART ROUTER LOG WATCHER ---
-import { watch } from "fs";
+// --- CAMEL LOG WATCHER ---
 const LOG_FILE = path.resolve("/home/site/wwwroot/node_logs.txt");
-
-// Watch for changes in the log file shared with Apache Camel
 watch(LOG_FILE, async (eventType) => {
     if (eventType === "change") {
         try {
@@ -200,16 +192,13 @@ watch(LOG_FILE, async (eventType) => {
             const lines = content.trim().split("\n");
             const lastLine = lines[lines.length - 1];
 
-            // If Camel's Wire Tap detects High Priority, broadcast to Dashboard
             if (lastLine.includes("🔥 HIGH PRIORITY")) {
                 io.emit("priority_alert", {
                     message: "Urgent ticket detected by Apache Camel!",
                     timestamp: new Date().toLocaleTimeString()
                 });
             }
-        } catch (err) {
-            // Silently fail if log file is temporarily locked
-        }
+        } catch (err) {}
     }
 });
 
