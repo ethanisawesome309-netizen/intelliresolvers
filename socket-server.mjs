@@ -188,6 +188,31 @@ io.on("connection", (socket) => {
     });
 });
 
+// --- ADDED: CAMEL SMART ROUTER LOG WATCHER ---
+import { watch } from "fs";
+const LOG_FILE = path.resolve("/home/site/wwwroot/node_logs.txt");
+
+// Watch for changes in the log file shared with Apache Camel
+watch(LOG_FILE, async (eventType) => {
+    if (eventType === "change") {
+        try {
+            const content = await fs.readFile(LOG_FILE, "utf-8");
+            const lines = content.trim().split("\n");
+            const lastLine = lines[lines.length - 1];
+
+            // If Camel's Wire Tap detects High Priority, broadcast to Dashboard
+            if (lastLine.includes("🔥 HIGH PRIORITY")) {
+                io.emit("priority_alert", {
+                    message: "Urgent ticket detected by Apache Camel!",
+                    timestamp: new Date().toLocaleTimeString()
+                });
+            }
+        } catch (err) {
+            // Silently fail if log file is temporarily locked
+        }
+    }
+});
+
 httpServer.listen(3001, "0.0.0.0", () => {
     console.log(`🚀 Socket.IO bridge active on port 3001`);
 });
